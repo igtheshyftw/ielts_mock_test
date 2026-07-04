@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IELTS Mock Test Portal</title>
+<style>
+  /* ============================================================
+     EDIT THESE TWO THINGS TO SET UP YOUR PORTAL:
+     1. PIN — change the value below.
+     2. TEST LIST — see the <script> block near the bottom of this
+        file (search for "TESTS ="). Add one line per test file.
+     ============================================================ */
+  :root{
+    --paper:#f6f4ee;
+    --ink:#232220;
+    --rule:#c9c2b2;
+    --accent:#8a4b3b;   /* stamped-wax red-brown, like an exam seal */
+    --accent-soft:#e7d9cd;
+    --muted:#726c60;
+    --focus:#2f6f5e;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(35,34,32,0.05) 1px, transparent 0);
+    background-size: 22px 22px;
+    color:var(--ink);
+    font-family: 'Iowan Old Style','Palatino Linotype',Georgia,serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:100%;
+    max-width:420px;
+    background:var(--paper);
+    border:1px solid var(--rule);
+    box-shadow: 0 1px 0 var(--rule), 0 18px 40px -24px rgba(35,34,32,0.4);
+    padding:40px 36px 32px;
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:8px;
+    border:1px solid rgba(35,34,32,0.15);
+    pointer-events:none;
+  }
+  .eyebrow{
+    font-family: 'Courier New', monospace;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    font-size:11px;
+    color:var(--muted);
+    margin:0 0 6px;
+  }
+  h1{
+    font-size:26px;
+    margin:0 0 4px;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+  .sub{
+    font-size:14px;
+    color:var(--muted);
+    margin:0 0 28px;
+    line-height:1.5;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  input[type="password"], input[type="text"]{
+    width:100%;
+    font-family:'Courier New', monospace;
+    font-size:22px;
+    letter-spacing:0.3em;
+    text-align:center;
+    padding:12px 10px;
+    border:1px solid var(--rule);
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+  }
+  input:focus{
+    border-color:var(--focus);
+    box-shadow:0 0 0 3px rgba(47,111,94,0.15);
+  }
+  button{
+    width:100%;
+    margin-top:18px;
+    padding:13px;
+    background:var(--accent);
+    color:#fdf9f4;
+    border:none;
+    font-family:inherit;
+    font-size:15px;
+    letter-spacing:0.04em;
+    cursor:pointer;
+    transition:background 0.15s ease;
+  }
+  button:hover{ background:#733d30; }
+  button:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+  .error{
+    color:var(--accent);
+    font-size:13px;
+    margin-top:12px;
+    min-height:18px;
+    text-align:center;
+  }
+
+  /* ---- Test list screen ---- */
+  .portal{ display:none; }
+  .list-card{ max-width:560px; }
+  .list-head{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:14px; margin-bottom:6px;
+  }
+  .list-head h1{ font-size:22px; margin:0; }
+  .signout{
+    background:none; border:none; width:auto; margin:0;
+    font-size:12px; color:var(--muted); text-decoration:underline;
+    cursor:pointer; padding:0; letter-spacing:0.04em;
+  }
+  ul.tests{ list-style:none; margin:20px 0 4px; padding:0; }
+  ul.tests li{
+    border-bottom:1px solid var(--rule);
+  }
+  ul.tests a{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    padding:16px 4px;
+    text-decoration:none;
+    color:var(--ink);
+  }
+  ul.tests a:hover .name, ul.tests a:focus-visible .name{ color:var(--accent); }
+  ul.tests .num{
+    font-family:'Courier New', monospace;
+    color:var(--muted);
+    font-size:13px;
+    min-width:22px;
+  }
+  ul.tests .name{ font-size:17px; flex:1; }
+  ul.tests .arrow{ color:var(--accent); font-size:16px; }
+  .empty{
+    color:var(--muted); font-size:14px; padding:20px 4px;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ===== PIN SCREEN ===== -->
+  <main class="card" id="lockScreen">
+    <p class="eyebrow">Students only</p>
+    <h1>IELTS Mock Tests</h1>
+    <p class="sub">Enter the PIN your teacher gave you to view the practice tests.</p>
+    <form id="pinForm" autocomplete="off">
+      <label for="pinInput">PIN</label>
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="12" autofocus>
+      <button type="submit">Unlock</button>
+      <p class="error" id="pinError" role="alert"></p>
+    </form>
+  </main>
+
+  <!-- ===== TEST LIST SCREEN ===== -->
+  <main class="card list-card portal" id="portalScreen">
+    <div class="list-head">
+      <h1>Mock Tests</h1>
+      <button class="signout" id="signOutBtn" type="button">Lock again</button>
+    </div>
+    <ul class="tests" id="testList"></ul>
+  </main>
+
+<script>
+  /* ============================================================
+     SETUP — edit these two constants.
+
+     PIN: whatever you want your students to type.
+     TESTS: one entry per mock test file. "file" is the exact
+            filename (must sit in the same folder as this page,
+            or a relative path like "tests/test1.html").
+     ============================================================ */
+  const PIN = "IELTS2026";
+
+  const TESTS = [
+    { name: "Mock Test 1 — Academic",   file: "test1.html" },
+    { name: "Mock Test 2 — Academic",   file: "test2.html" },
+    { name: "Mock Test 3 — General",    file: "test3.html" },
+    // Add more lines like the ones above, one per test file.
+  ];
+
+  /* ============================================================
+     No need to edit anything below this line.
+     ============================================================ */
+  const lockScreen = document.getElementById('lockScreen');
+  const portalScreen = document.getElementById('portalScreen');
+  const pinForm = document.getElementById('pinForm');
+  const pinInput = document.getElementById('pinInput');
+  const pinError = document.getElementById('pinError');
+  const testList = document.getElementById('testList');
+  const signOutBtn = document.getElementById('signOutBtn');
+
+  function renderTests(){
+    testList.innerHTML = "";
+    if(!TESTS.length){
+      testList.innerHTML = '<li class="empty">No tests have been added yet.</li>';
+      return;
+    }
+    TESTS.forEach((t, i) => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = t.file;
+      a.innerHTML = `<span class="num">${String(i+1).padStart(2,'0')}</span><span class="name">${t.name}</span><span class="arrow">&#8594;</span>`;
+      li.appendChild(a);
+      testList.appendChild(li);
+    });
+  }
+
+  function showPortal(){
+    lockScreen.style.display = 'none';
+    portalScreen.style.display = 'block';
+    renderTests();
+  }
+
+  function showLock(){
+    portalScreen.style.display = 'none';
+    lockScreen.style.display = 'block';
+    pinInput.value = "";
+    pinInput.focus();
+  }
+
+  // Restore unlocked state for this browser tab session
+  if(sessionStorage.getItem('ieltsUnlocked') === 'true'){
+    showPortal();
+  }
+
+  pinForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(pinInput.value.trim() === PIN){
+      sessionStorage.setItem('ieltsUnlocked', 'true');
+      pinError.textContent = "";
+      showPortal();
+    } else {
+      pinError.textContent = "That PIN isn't right. Try again.";
+      pinInput.value = "";
+      pinInput.focus();
+    }
+  });
+
+  signOutBtn.addEventListener('click', function(){
+    sessionStorage.removeItem('ieltsUnlocked');
+    showLock();
+  });
+</script>
+</body>
+</html>

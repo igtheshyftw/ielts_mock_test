@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IELTS Writing Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1a2b3c;
+    --paper: #ffffff;
+    --shell: #e8ecf0;
+    --band: #2d4a63;
+    --band-dark: #1e3447;
+    --rule: #c4ccd4;
+    --rule-soft: #dde3e9;
+    --accent: #b03a2e;
+    --accent-soft: #f4e4e2;
+    --muted: #6b7886;
+    --ok: #2e7d52;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    background: var(--shell);
+    color: var(--ink);
+    height: 100vh;
+    overflow: hidden;
+    font-size: 15px;
+  }
+
+  .screen { height: 100vh; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ============ SETUP SCREEN ============ */
+  #setup { align-items: center; justify-content: center; overflow-y: auto; padding: 30px 18px; }
+  .setup-card {
+    background: var(--paper); width: 100%; max-width: 520px; border-radius: 8px;
+    border: 1px solid var(--rule); box-shadow: 0 14px 40px rgba(20,40,60,.12); overflow: hidden;
+  }
+  .setup-head {
+    background: var(--band-dark); color: #fff; padding: 22px 28px; border-bottom: 3px solid var(--accent);
+  }
+  .setup-head h1 { font-size: 20px; letter-spacing: .3px; margin-bottom: 3px; }
+  .setup-head p { font-size: 13px; color: #c3cdd6; }
+  .setup-body { padding: 26px 28px 28px; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--muted); margin-bottom: 9px;
+  }
+  #nameInput {
+    width: 100%; border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px;
+    font-family: inherit; font-size: 15px; color: var(--ink); margin-bottom: 6px;
+  }
+  #nameInput:focus { outline: none; border-color: var(--band); }
+  .info-box {
+    background: #f6f8fa; border: 1px solid var(--rule); border-left: 4px solid var(--band);
+    padding: 13px 16px; border-radius: 5px; font-size: 13px; color: var(--muted);
+    line-height: 1.6; margin: 18px 0 20px;
+  }
+  .info-box strong { color: var(--ink); }
+  .err { color: var(--accent); font-size: 13px; margin-bottom: 14px; display: none; }
+  .err.show { display: block; }
+  .start-btn {
+    width: 100%; background: var(--accent); color: #fff; border: none; font-family: inherit;
+    font-weight: 700; font-size: 16px; padding: 14px; border-radius: 6px; cursor: pointer;
+  }
+  .start-btn:hover { background: #8f2e24; }
+
+  /* ============ WRITING SCREEN ============ */
+  .exam-bar {
+    background: var(--band-dark); color: #fff; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 18px; height: 46px; flex-shrink: 0;
+    border-bottom: 2px solid #0d1f2d;
+  }
+  .exam-bar .candidate { font-size: 13px; letter-spacing: .3px; }
+  .exam-bar .brand {
+    font-weight: 700; letter-spacing: 1.5px; font-size: 14px; text-transform: uppercase; color: #d6dee5;
+  }
+  .status-row {
+    background: var(--band); color: #fff; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 18px; height: 44px; flex-shrink: 0;
+  }
+  .timer { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 700; }
+  .timer .clock {
+    font-variant-numeric: tabular-nums; background: rgba(255,255,255,.12);
+    padding: 4px 11px; border-radius: 3px; letter-spacing: 1px;
+  }
+  .timer.low .clock { background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  .timer-hint { font-size: 12px; color: #c3cdd6; }
+
+  /* tabs for the two tasks */
+  .part-tabs { display: flex; background: #f0f3f6; flex-shrink: 0; border-bottom: 1px solid var(--rule); }
+  .part-tab {
+    flex: 1; padding: 11px 16px; border: none; background: #f0f3f6;
+    border-right: 1px solid var(--rule); cursor: pointer; font-family: inherit; font-size: 14px;
+    color: var(--muted); text-align: left; display: flex; flex-direction: column; gap: 2px;
+  }
+  .part-tab:last-child { border-right: none; }
+  .part-tab strong { color: var(--ink); font-size: 14px; }
+  .part-tab span { font-size: 11.5px; }
+  .part-tab.active { background: var(--paper); border-bottom: 3px solid var(--accent); color: var(--ink); }
+  .part-tab.active strong { color: var(--accent); }
+
+  .workspace { display: flex; flex: 1; min-height: 0; background: var(--shell); }
+  .pane { background: var(--paper); overflow-y: auto; height: 100%; }
+  .pane.prompt { width: 38%; padding: 26px 30px; border-right: 6px solid var(--shell); }
+  .pane.answer { flex: 1; display: flex; flex-direction: column; padding: 0; }
+
+  .task-label {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 3px; margin-bottom: 16px;
+  }
+  .task-instructions { font-size: 14.5px; line-height: 1.65; margin-bottom: 16px; }
+  .task-instructions p { margin-bottom: 12px; }
+  .prompt-note {
+    background: #f6f8fa; border: 1px solid var(--rule); border-left: 4px solid var(--band);
+    padding: 16px 18px; font-size: 14.5px; line-height: 1.6; margin-bottom: 16px; color: var(--muted);
+  }
+  .prompt-note strong { color: var(--ink); }
+  .min-words { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  .answer-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 10px 18px;
+    border-bottom: 1px solid var(--rule); flex-shrink: 0; background: #fafbfc;
+  }
+  .answer-head .lbl { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .word-count { font-size: 13px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .word-count.under { color: var(--accent); }
+  .word-count.met { color: var(--ok); }
+
+  .editor {
+    flex: 1; width: 100%; border: none; outline: none; resize: none; padding: 22px 26px;
+    font-family: Arial, sans-serif; font-size: 16px; line-height: 1.8; color: var(--ink);
+    background: var(--paper);
+    background-image: repeating-linear-gradient(
+      transparent, transparent 28px, var(--rule-soft) 28px, var(--rule-soft) 29px);
+    background-attachment: local;
+  }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+    border-top: 1px solid var(--rule); background: #f0f3f6; flex-shrink: 0;
+  }
+  .toolbar button {
+    background: #fff; border: 1px solid var(--rule); color: var(--ink); width: 34px; height: 32px;
+    border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .toolbar button:hover:not(:disabled) { background: #e8ecf0; }
+  .toolbar button:disabled { opacity: .4; cursor: not-allowed; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .submit {
+    width: auto; padding: 0 20px; background: var(--accent); color: #fff;
+    border-color: var(--accent); font-weight: 700; font-size: 13px;
+  }
+  .toolbar .submit:hover:not(:disabled) { background: #8f2e24; }
+  .hint { font-size: 11.5px; color: var(--muted); margin-right: 8px; }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15,30,45,.6); display: none;
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  .overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 6px; padding: 26px 30px; max-width: 430px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  .modal h2 { font-size: 19px; margin-bottom: 12px; color: var(--ink); }
+  .modal p { font-size: 14px; line-height: 1.6; color: var(--muted); margin-bottom: 8px; }
+  .modal .stat { color: var(--ink); font-weight: 700; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .modal-actions button {
+    padding: 9px 18px; border-radius: 4px; border: 1px solid var(--rule); background: #fff;
+    cursor: pointer; font-family: inherit; font-size: 14px;
+  }
+  .modal-actions .confirm { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+
+  /* ============ WATERMARK ============ */
+  .watermark {
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999; overflow: hidden;
+    background-image: repeating-linear-gradient(
+      -30deg, transparent 0, transparent 180px,
+      rgba(120,130,140,0.06) 180px, rgba(120,130,140,0.06) 360px);
+  }
+  .watermark::before {
+    content: "MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY · MACFISHBURGER ONLY";
+    position: absolute; top: -20%; left: -20%; width: 140%; height: 140%;
+    transform: rotate(-30deg); font-size: 34px; font-weight: 800; line-height: 2.6;
+    letter-spacing: 2px; color: rgba(120,130,140,0.10); word-spacing: 8px;
+    white-space: normal; text-transform: uppercase; font-family: Arial, sans-serif;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ INTERFACE 1: SETUP (name only) ============ -->
+  <div class="screen active" id="setup">
+    <div class="setup-card">
+      <div class="setup-head">
+        <h1>IELTS Writing Simulator</h1>
+        <p>Academic Writing · Task 1 &amp; Task 2 · 60 minutes</p>
+      </div>
+      <div class="setup-body">
+        <label class="form-label" for="nameInput">Candidate name</label>
+        <input type="text" id="nameInput" placeholder="Enter your full name" autocomplete="off">
+        <div class="info-box">
+          You have <strong>60 minutes</strong> to complete <strong>both tasks</strong>.
+          The timer starts as soon as you begin. The question papers are provided in
+          print — it is recommended you spend about <strong>20 minutes</strong> on
+          Task 1 (min 150 words) and <strong>40 minutes</strong> on Task 2 (min 250 words).
+          Switch between the two tasks using the tabs at any time.
+        </div>
+        <div class="err" id="setupErr">Please enter your name to begin.</div>
+        <button class="start-btn" id="startBtn">Begin test &amp; start timer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ INTERFACE 2: WRITING ============ -->
+  <div class="screen" id="writing">
+    <div class="exam-bar">
+      <div class="candidate" id="candidateBar">Candidate: —</div>
+      <div class="brand">Academic Writing</div>
+    </div>
+
+    <div class="status-row">
+      <div class="timer" id="timer">
+        <span>Time remaining:</span>
+        <span class="clock" id="clock">60:00</span>
+      </div>
+      <div class="timer-hint">Both tasks · one hour total</div>
+    </div>
+
+    <div class="part-tabs" id="tabs">
+      <button class="part-tab active" data-part="1">
+        <strong>Task 1</strong>
+        <span>Report · suggested 20 min · min 150 words</span>
+      </button>
+      <button class="part-tab" data-part="2">
+        <strong>Task 2</strong>
+        <span>Essay · suggested 40 min · min 250 words</span>
+      </button>
+    </div>
+
+    <div class="workspace">
+      <div class="pane prompt" id="promptPane"></div>
+
+      <div class="pane answer">
+        <div class="answer-head">
+          <span class="lbl" id="answerLbl">Your answer — Task 1</span>
+          <span class="word-count under" id="wordCount">Words: 0</span>
+        </div>
+        <textarea class="editor" id="editor"
+          spellcheck="false" autocomplete="off" autocorrect="off"
+          autocapitalize="off" data-gramm="false"
+          placeholder="Begin typing your answer here…"></textarea>
+        <div class="toolbar">
+          <button id="cutBtn" title="Cut">✂</button>
+          <button id="copyBtn" title="Copy">⧉</button>
+          <button id="pasteBtn" title="Paste">📋</button>
+          <button id="undoBtn" title="Undo">↶</button>
+          <button id="redoBtn" title="Redo">↷</button>
+          <div class="spacer"></div>
+          <span class="hint">No keyboard shortcuts · No autocorrect</span>
+          <button class="submit" id="submitBtn">Submit test</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL ============ -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2 id="modalTitle"></h2>
+      <p id="modalBody"></p>
+      <div class="modal-actions">
+        <button id="modalCancel">Keep working</button>
+        <button class="confirm" id="modalConfirm">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ WATERMARK OVERLAY ============ -->
+  <div class="watermark" aria-hidden="true"></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  // ===== Fixed task meta (no prompt entry — students have printed papers) =====
+  const TASKS = {
+    1: { min: 150, suggested: 20, answerLbl: "Your answer — Task 1" },
+    2: { min: 250, suggested: 40, answerLbl: "Your answer — Task 2" }
+  };
+
+  let candidateName = "";
+  let currentPart = 1;
+  const answers = { 1: "", 2: "" };
+
+  const editor = $("editor");
+  const wordCountEl = $("wordCount");
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  // ---- Prompt panel content (points to the printed paper, no prompt shown) ----
+  function promptHtml(part) {
+    const t = TASKS[part];
+    return (
+      '<span class="task-label">Writing Task ' + part + '</span>' +
+      '<div class="task-instructions"><p>You should spend about <strong>' +
+        t.suggested + ' minutes</strong> on this task.</p></div>' +
+      '<div class="prompt-note">Refer to <strong>Task ' + part +
+        '</strong> on your printed question paper. Read the task carefully and ' +
+        'write your response in the answer area.</div>' +
+      '<p class="min-words">Write at least ' + t.min + ' words.</p>'
+    );
+  }
+
+  // ---- Switch between task tabs ----
+  function renderPart(part) {
+    answers[currentPart] = editor.value;   // save outgoing
+    currentPart = part;
+    $("promptPane").innerHTML = promptHtml(part);
+    $("answerLbl").textContent = TASKS[part].answerLbl;
+    editor.value = answers[part];
+    updateWordCount();
+    refreshUndoButtons();
+    editor.focus();
+    document.querySelectorAll(".part-tab").forEach((t) => {
+      t.classList.toggle("active", t.dataset.part === String(part));
+    });
+  }
+
+  $("tabs").addEventListener("click", (e) => {
+    const tab = e.target.closest(".part-tab");
+    if (tab) renderPart(Number(tab.dataset.part));
+  });
+
+  // ---- Word count ----
+  function countWords(text) {
+    const t = text.trim();
+    return t ? t.split(/\s+/).length : 0;
+  }
+  function updateWordCount() {
+    const n = countWords(editor.value);
+    const min = TASKS[currentPart].min;
+    wordCountEl.textContent = "Words: " + n;
+    wordCountEl.classList.toggle("met", n >= min);
+    wordCountEl.classList.toggle("under", n < min);
+  }
+  editor.addEventListener("input", updateWordCount);
+
+  // ---- Block quick keys / paste etc. ----
+  editor.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) { e.preventDefault(); e.stopPropagation(); }
+  });
+  editor.addEventListener("contextmenu", (e) => e.preventDefault());
+  ["paste", "cut", "copy"].forEach((ev) => editor.addEventListener(ev, (e) => e.preventDefault()));
+  editor.addEventListener("drop", (e) => e.preventDefault());
+
+  // ---- Toolbar with internal clipboard ----
+  let internalClipboard = "";
+  function selRange() { return { start: editor.selectionStart, end: editor.selectionEnd }; }
+  function replaceSelection(text) {
+    const { start, end } = selRange();
+    const v = editor.value;
+    editor.value = v.slice(0, start) + text + v.slice(end);
+    const pos = start + text.length;
+    editor.setSelectionRange(pos, pos);
+    pushHistory();
+    updateWordCount();
+    editor.focus();
+  }
+  $("cutBtn").addEventListener("click", () => {
+    const { start, end } = selRange();
+    if (start === end) return;
+    internalClipboard = editor.value.slice(start, end);
+    replaceSelection("");
+  });
+  $("copyBtn").addEventListener("click", () => {
+    const { start, end } = selRange();
+    if (start === end) return;
+    internalClipboard = editor.value.slice(start, end);
+    editor.focus();
+  });
+  $("pasteBtn").addEventListener("click", () => {
+    if (internalClipboard) replaceSelection(internalClipboard);
+  });
+
+  // ---- Per-task undo / redo ----
+  const historyStore = { 1: [""], 2: [""] };
+  const hPos = { 1: 0, 2: 0 };
+  let historyTimer = null;
+
+  function pushHistory() {
+    const stack = historyStore[currentPart];
+    stack.length = hPos[currentPart] + 1;
+    stack.push(editor.value);
+    if (stack.length > 200) stack.shift();
+    hPos[currentPart] = stack.length - 1;
+    refreshUndoButtons();
+  }
+  editor.addEventListener("input", () => {
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(pushHistory, 350);
+  });
+  function refreshUndoButtons() {
+    $("undoBtn").disabled = hPos[currentPart] <= 0;
+    $("redoBtn").disabled = hPos[currentPart] >= historyStore[currentPart].length - 1;
+  }
+  $("undoBtn").addEventListener("click", () => {
+    if (hPos[currentPart] > 0) {
+      hPos[currentPart]--;
+      editor.value = historyStore[currentPart][hPos[currentPart]];
+      updateWordCount(); refreshUndoButtons(); editor.focus();
+    }
+  });
+  $("redoBtn").addEventListener("click", () => {
+    if (hPos[currentPart] < historyStore[currentPart].length - 1) {
+      hPos[currentPart]++;
+      editor.value = historyStore[currentPart][hPos[currentPart]];
+      updateWordCount(); refreshUndoButtons(); editor.focus();
+    }
+  });
+
+  // ---- Single 60-minute timer, starts after name submit ----
+  const TOTAL = 60 * 60;
+  let remaining = TOTAL;
+  let running = false;
+  let tick = null;
+  function fmt(s) {
+    const m = Math.floor(s / 60), sec = s % 60;
+    return String(m).padStart(2, "0") + ":" + String(sec).padStart(2, "0");
+  }
+  function renderClock() {
+    $("clock").textContent = fmt(remaining);
+    $("timer").classList.toggle("low", remaining <= 300);
+  }
+  function startTimer() {
+    running = true;
+    clearInterval(tick);
+    tick = setInterval(() => {
+      if (!running) return;
+      remaining = Math.max(0, remaining - 1);
+      renderClock();
+      if (remaining === 0) {
+        running = false;
+        clearInterval(tick);
+        openModal("Time is up",
+          "Your hour has ended. Submit to download both responses as a PDF.",
+          "Submit & download", () => doSubmit());
+      }
+    }, 1000);
+  }
+
+  // ---- Modal ----
+  let confirmAction = null;
+  function openModal(title, body, confirmText, action) {
+    $("modalTitle").textContent = title;
+    $("modalBody").innerHTML = body;
+    $("modalConfirm").textContent = confirmText;
+    confirmAction = action;
+    $("modalConfirm").style.display = action ? "" : "none";
+    $("modalCancel").style.display = action ? "" : "none";
+    $("overlay").classList.add("show");
+  }
+  function closeModal() { $("overlay").classList.remove("show"); }
+  $("modalCancel").addEventListener("click", closeModal);
+  $("modalConfirm").addEventListener("click", () => {
+    if (confirmAction) confirmAction();
+    closeModal();
+  });
+
+  // ---- PDF (both tasks) ----
+  function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 56, contentW = pageW - margin * 2;
+    let y = margin;
+
+    function ensureSpace(n) { if (y + n > pageH - margin) { doc.addPage(); y = margin; } }
+    function writeLines(text, size, style, gap, color) {
+      doc.setFont("helvetica", style || "normal");
+      doc.setFontSize(size);
+      doc.setTextColor.apply(doc, color || [26, 43, 60]);
+      const lines = doc.splitTextToSize(text, contentW);
+      const lh = size * gap;
+      lines.forEach((line) => { ensureSpace(lh); doc.text(line, margin, y); y += lh; });
+    }
+    function rule() {
+      ensureSpace(14);
+      doc.setDrawColor(196, 204, 212); doc.setLineWidth(0.7);
+      doc.line(margin, y, pageW - margin, y); y += 14;
+    }
+
+    doc.setFillColor(30, 52, 71); doc.rect(0, 0, pageW, 64, "F");
+    doc.setFont("helvetica", "bold"); doc.setFontSize(15); doc.setTextColor(255, 255, 255);
+    doc.text("IELTS Academic Writing — Submission", margin, 34);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(214, 222, 229);
+    const who = candidateName ? "Candidate: " + candidateName + "   ·   " : "";
+    doc.text(who + "Generated: " + new Date().toLocaleString(), margin, 50);
+    y = 92;
+
+    [1, 2].forEach((part, i) => {
+      const t = TASKS[part];
+      const ans = (answers[part] || "").trim();
+      const words = countWords(answers[part]);
+      if (i > 0) { ensureSpace(30); y += 10; }
+
+      writeLines("Writing Task " + part, 14, "bold", 1.35, [176, 58, 46]); y += 4;
+      writeLines("(Minimum " + t.min + " words · suggested " + t.suggested + " minutes)",
+        9.5, "italic", 1.4, [107, 120, 134]); y += 8;
+      rule();
+      writeLines("RESPONSE  (Words: " + words + ")", 9, "bold", 1.4, [107, 120, 134]); y += 2;
+      writeLines(ans || "[No response provided]", 11, "normal", 1.5); y += 8;
+    });
+
+    // watermark + page numbers on every page
+    const pages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= pages; p++) {
+      doc.setPage(p);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(26); doc.setTextColor(205, 210, 215);
+      if (typeof doc.setGState === "function") doc.setGState(new doc.GState({ opacity: 0.18 }));
+      const wm = "MACFISHBURGER ONLY";
+      for (let row = -1; row < 14; row++) {
+        for (let col = -1; col < 4; col++) {
+          doc.text(wm, col * 230 - 40, row * 70 + 30, { angle: 30 });
+        }
+      }
+      if (typeof doc.setGState === "function") doc.setGState(new doc.GState({ opacity: 1 }));
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(150, 160, 170);
+      doc.text("Page " + p + " of " + pages, pageW - margin, pageH - 24, { align: "right" });
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    const nameSlug = (candidateName || "candidate").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "candidate";
+    doc.save("IELTS-Writing-" + nameSlug + "-" + stamp + ".pdf");
+  }
+
+  function doSubmit() {
+    answers[currentPart] = editor.value;
+    running = false; clearInterval(tick);
+    generatePDF();
+    openModal("Test submitted",
+      "Both responses have been recorded and a PDF has been downloaded. " +
+      "You may now close this window.", "Close", null);
+  }
+
+  $("submitBtn").addEventListener("click", () => {
+    answers[currentPart] = editor.value;
+    const w1 = countWords(answers[1]);
+    const w2 = countWords(answers[2]);
+    openModal("Submit your test?",
+      'Task 1: <span class="stat">' + w1 + ' words</span> (min 150)<br>' +
+      'Task 2: <span class="stat">' + w2 + ' words</span> (min 250)<br><br>' +
+      'You cannot change your answers after submitting.',
+      "Submit", () => doSubmit());
+  });
+
+  // ---- Start flow: name → writing → timer ----
+  $("nameInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("startBtn").click(); });
+  $("startBtn").addEventListener("click", () => {
+    const name = $("nameInput").value.trim();
+    if (!name) { $("setupErr").classList.add("show"); $("nameInput").focus(); return; }
+    candidateName = name;
+    $("candidateBar").textContent = "Candidate: " + candidateName;
+
+    // init writing screen
+    currentPart = 1;
+    $("promptPane").innerHTML = promptHtml(1);
+    $("answerLbl").textContent = TASKS[1].answerLbl;
+    editor.value = "";
+    updateWordCount();
+    refreshUndoButtons();
+
+    // swap screens
+    $("setup").classList.remove("active");
+    $("writing").classList.add("active");
+    editor.focus();
+
+    // start the single 60-minute timer now
+    remaining = TOTAL;
+    renderClock();
+    startTimer();
+  });
+
+  renderClock();
+})();
+</script>
+</body>
+</html>

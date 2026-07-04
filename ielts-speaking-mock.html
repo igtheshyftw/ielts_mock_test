@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IELTS Speaking — Mock Test</title>
+<style>
+  :root {
+    --ink: #1b2733;
+    --paper: #ffffff;
+    --bg: #eef1f4;
+    --band: #2d4a63;
+    --band-dark: #1e3447;
+    --rule: #ccd4dc;
+    --rule-soft: #e2e7ec;
+    --accent: #b03a2e;
+    --accent-soft: #f6e7e4;
+    --muted: #6b7886;
+    --ok: #2e7d52;
+    --rec: #d0332c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ============ START SCREEN ============ */
+  #start {
+    min-height: 100vh;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 18px;
+  }
+  #start.active { display: flex; }
+  .start-card {
+    background: var(--paper); width: 100%; max-width: 520px;
+    border-radius: 8px; border: 1px solid var(--rule);
+    box-shadow: 0 14px 40px rgba(20,40,60,.12); overflow: hidden;
+  }
+  .start-head {
+    background: var(--band-dark); color: #fff; padding: 22px 28px;
+    border-bottom: 3px solid var(--accent);
+  }
+  .start-head h1 { font-size: 20px; letter-spacing: .3px; margin-bottom: 3px; }
+  .start-head p { font-size: 13px; color: #c3cdd6; }
+  .start-body { padding: 26px 28px 28px; }
+  .form-label {
+    display: block; font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--muted); margin-bottom: 9px;
+  }
+  #nameInput {
+    width: 100%; border: 1px solid var(--rule); border-radius: 6px;
+    padding: 12px 14px; font-family: inherit; font-size: 15px; color: var(--ink);
+    margin-bottom: 6px;
+  }
+  #nameInput:focus { outline: none; border-color: var(--band); }
+  .mic-note {
+    background: #f6f8fa; border: 1px solid var(--rule); border-left: 4px solid var(--band);
+    padding: 12px 15px; border-radius: 5px; font-size: 13px; color: var(--muted);
+    line-height: 1.55; margin: 18px 0 20px;
+  }
+  .err { color: var(--accent); font-size: 13px; margin-bottom: 14px; display: none; }
+  .err.show { display: block; }
+  .start-btn {
+    width: 100%; background: var(--accent); color: #fff; border: none;
+    font-family: inherit; font-weight: 700; font-size: 16px; padding: 14px;
+    border-radius: 6px; cursor: pointer;
+  }
+  .start-btn:hover { background: #8f2e24; }
+
+  /* ============ TEST SCREEN ============ */
+  header {
+    background: var(--band-dark); color: #fff; padding: 16px 0;
+    border-bottom: 3px solid var(--accent); margin-bottom: 22px;
+  }
+  header .inner {
+    max-width: 720px; margin: 0 auto; padding: 0 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  }
+  header h1 { font-size: 18px; letter-spacing: .3px; }
+  header .who { font-size: 12.5px; color: #c3cdd6; margin-top: 2px; }
+
+  .rec-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--rec); color: #fff; padding: 7px 14px; border-radius: 40px;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  .rec-pill .dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1s infinite; }
+  .rec-pill .t { font-variant-numeric: tabular-nums; letter-spacing: .5px; }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .shell { max-width: 720px; margin: 0 auto; padding: 0 18px 60px; }
+
+  .progress { display: flex; gap: 8px; margin-bottom: 20px; }
+  .progress .seg { flex: 1; height: 6px; border-radius: 3px; background: var(--rule); }
+  .progress .seg.done { background: var(--ok); }
+  .progress .seg.active { background: var(--accent); }
+
+  .stage-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted); margin-bottom: 10px;
+  }
+
+  .card {
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 8px;
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .card-head {
+    background: var(--band); color: #fff; padding: 12px 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-head .tag {
+    font-size: 12px; font-weight: 700; letter-spacing: 1px;
+    background: rgba(255,255,255,.16); border-radius: 3px; padding: 2px 9px;
+  }
+  .card-head .topic { font-size: 14px; font-weight: 700; text-transform: capitalize; }
+  .card-head .count { margin-left: auto; font-size: 11.5px; color: #c3cdd6; }
+  .card-body { padding: 22px 24px 24px; }
+
+  .question { font-size: 18px; font-weight: 600; line-height: 1.45; margin-bottom: 6px; }
+  .q-progress { font-size: 12.5px; color: var(--muted); }
+
+  .cue-prompt { font-size: 19px; font-weight: 700; line-height: 1.4; margin-bottom: 14px; }
+  .cue-sub { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  .cue-bullets { list-style: none; margin: 4px 0 4px; }
+  .cue-bullets li { position: relative; padding: 6px 0 6px 22px; font-size: 15.5px; }
+  .cue-bullets li::before {
+    content: ""; position: absolute; left: 4px; top: 14px; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--accent);
+  }
+  .prep-banner {
+    background: var(--accent-soft); color: var(--accent); border-radius: 5px;
+    padding: 10px 14px; font-size: 13.5px; font-weight: 700; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .nav-row { display: flex; gap: 12px; margin-top: 8px; }
+  .nav-btn {
+    flex: 1; font-family: inherit; font-size: 14px; font-weight: 700;
+    padding: 12px; border-radius: 6px; cursor: pointer; border: 1px solid var(--rule);
+    background: #fff; color: var(--ink);
+  }
+  .nav-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .nav-btn.primary:hover { background: #8f2e24; }
+  .nav-btn.finish { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .nav-btn.finish:hover { background: #25623f; }
+  .nav-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .mic-warn {
+    background: #fff8e6; border: 1px solid #e8d48a; color: #7a5b00;
+    padding: 12px 15px; border-radius: 6px; font-size: 13px; margin-bottom: 18px;
+    line-height: 1.55; display: none;
+  }
+  .mic-warn.show { display: block; }
+
+  .done-box { text-align: center; padding: 10px 0 4px; }
+  .done-box .big { font-size: 40px; margin-bottom: 8px; color: var(--ok); }
+  .done-box h2 { font-size: 20px; margin-bottom: 8px; }
+  .done-box p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
+  .done-audio { width: 100%; margin: 18px 0 8px; }
+
+  .note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+  <!-- ============ SCREEN 1: START / NAME ============ -->
+  <div id="start" class="active">
+    <div class="start-card">
+      <div class="start-head">
+        <h1>IELTS Speaking — Mock Test</h1>
+        <p>Part 1 &amp; Part 2 · randomly generated · continuous recording</p>
+      </div>
+      <div class="start-body">
+        <label class="form-label" for="nameInput">Student's name</label>
+        <input type="text" id="nameInput" placeholder="Enter the student's full name" autocomplete="off">
+        <div class="mic-note">
+          When you begin, recording starts immediately and runs through the whole
+          test. Your browser will ask for microphone permission. The full audio is
+          downloaded automatically when you finish.
+        </div>
+        <div class="err" id="startErr">Please enter the student's name to begin.</div>
+        <button class="start-btn" id="beginBtn">Begin test &amp; start recording</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 2: TEST ============ -->
+  <div id="test" class="screen">
+    <header>
+      <div class="inner">
+        <div>
+          <h1>IELTS Speaking — Mock Test</h1>
+          <div class="who" id="whoBar">Candidate: —</div>
+        </div>
+        <div class="rec-pill" id="recPill">
+          <span class="dot"></span><span id="recWord">REC</span><span class="t" id="recClock">00:00</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="shell">
+      <div class="progress" id="progress"></div>
+      <div class="mic-warn" id="micWarn"></div>
+      <div id="stage"></div>
+      <p class="note" id="footNote">
+        A single recording captures the entire test from the moment you began.
+        It downloads automatically when you finish, and can also be saved manually below.
+      </p>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  // ================= QUESTION BANK =================
+  const PART1 = {
+    "Hometown": [
+      "Where is your hometown?",
+      "What is your hometown known for?",
+      "Do you like your hometown? Why or why not?",
+      "Has your hometown changed much since you were a child?",
+      "Would you recommend your hometown to a visitor?",
+      "Do you think you will live in your hometown in the future?",
+      "What do you like most about your hometown?"
+    ],
+    "Work or Studies": [
+      "Do you work or are you a student?",
+      "Why did you choose that subject or job?",
+      "What do you find most interesting about it?",
+      "Is there anything you dislike about it?",
+      "What would you like to do in the future?",
+      "Do you prefer working alone or in a team?"
+    ],
+    "Hobbies & Free Time": [
+      "What do you usually do in your free time?",
+      "How did you become interested in your hobby?",
+      "Do you prefer to spend free time alone or with others?",
+      "Has the way you spend your free time changed over the years?",
+      "Is there a new hobby you would like to try?",
+      "Do you have enough free time these days?"
+    ],
+    "Food & Cooking": [
+      "What kind of food do you like?",
+      "Do you enjoy cooking?",
+      "Who does most of the cooking in your home?",
+      "Do you prefer eating at home or in restaurants?",
+      "Have your eating habits changed in recent years?",
+      "What food would you recommend to a visitor?"
+    ],
+    "Technology": [
+      "How often do you use the internet?",
+      "What do you mainly use your phone for?",
+      "Do you think you spend too much time online?",
+      "How has technology changed your daily life?",
+      "What app do you find most useful?",
+      "Do you think technology makes people less social?"
+    ],
+    "Music": [
+      "What kind of music do you like?",
+      "Do you play any musical instruments?",
+      "When do you usually listen to music?",
+      "Has your taste in music changed over time?",
+      "Do you prefer live music or recorded music?",
+      "Would you like to learn a new instrument?"
+    ],
+    "Weather & Seasons": [
+      "What's the weather like in your country?",
+      "What is your favourite season of the year?",
+      "Do you prefer hot or cold weather?",
+      "Does the weather ever affect your mood?",
+      "What do you usually do on a rainy day?",
+      "Is there a season you dislike? Why?"
+    ],
+    "Travel & Transport": [
+      "How do you usually travel to work or school?",
+      "Do you prefer public transport or driving?",
+      "What kind of places do you like to visit?",
+      "Do you prefer travelling alone or with others?",
+      "Is there a country you would love to visit?",
+      "How has transport changed in your country?"
+    ],
+    "Daily Routine": [
+      "What does your typical day look like?",
+      "Are you a morning person or a night person?",
+      "What time do you usually get up?",
+      "Do you prefer weekdays or weekends?",
+      "What is the most important part of your day?",
+      "What do you usually do before going to bed?"
+    ],
+    "Friends & Family": [
+      "Do you have a large or small family?",
+      "Who are you closest to in your family?",
+      "How often do you see your friends?",
+      "What do you usually do together?",
+      "Is it easy for you to make new friends?",
+      "What qualities do you look for in a friend?"
+    ]
+  };
+
+  const PART2 = [
+    { prompt: "Describe a person you admire.",
+      bullets: ["who this person is", "how you know them", "what qualities they have", "and explain why you admire them."] },
+    { prompt: "Describe a place you have visited that you found memorable.",
+      bullets: ["where it is", "when you went there", "what you did there", "and explain why it was memorable."] },
+    { prompt: "Describe something you own that is important to you.",
+      bullets: ["what it is", "how you got it", "how long you have had it", "and explain why it is important to you."] },
+    { prompt: "Describe a celebration or event you enjoyed.",
+      bullets: ["what the event was", "where it took place", "who you were with", "and explain why you enjoyed it."] },
+    { prompt: "Describe a skill you would like to learn.",
+      bullets: ["what the skill is", "how you would learn it", "how long it might take", "and explain why you want to learn it."] },
+    { prompt: "Describe an important decision you made.",
+      bullets: ["what the decision was", "when you made it", "how you decided", "and explain how you felt afterwards."] },
+    { prompt: "Describe a website or app you use often.",
+      bullets: ["what it is", "how often you use it", "what you use it for", "and explain why you find it useful."] },
+    { prompt: "Describe a job you would like to have.",
+      bullets: ["what the job is", "what it involves", "what skills it needs", "and explain why you would like it."] },
+    { prompt: "Describe a happy memory from your childhood.",
+      bullets: ["what the memory is", "when it happened", "who was involved", "and explain why it makes you happy."] },
+    { prompt: "Describe a book or film you enjoyed.",
+      bullets: ["what it was", "what it was about", "when you experienced it", "and explain why you enjoyed it."] },
+    { prompt: "Describe a time you helped someone.",
+      bullets: ["who you helped", "what the situation was", "what you did", "and explain how you felt about it."] },
+    { prompt: "Describe a place in nature you enjoy.",
+      bullets: ["where it is", "how often you go there", "what it is like", "and explain why you enjoy being there."] }
+  ];
+
+  // ================= UTILITIES =================
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+  function fmtTime(sec) {
+    const m = Math.floor(sec / 60), s = sec % 60;
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+  function safeName(s) {
+    return (s || "student").trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "student";
+  }
+
+  // ================= STATE =================
+  let studentName = "";
+  let steps = [];
+  let idx = 0;
+
+  function buildTest() {
+    steps = [];
+    idx = 0;
+    const topics = shuffle(Object.keys(PART1)).slice(0, 3);
+    topics.forEach((topic) => {
+      const n = 3 + Math.floor(Math.random() * 2);
+      const qs = shuffle(PART1[topic]).slice(0, Math.min(n, PART1[topic].length));
+      qs.forEach((q) => steps.push({ part: 1, topic, text: q }));
+    });
+    const cue = pick(PART2);
+    steps.push({ part: 2, topic: "Individual long turn", text: cue.prompt, bullets: cue.bullets });
+  }
+
+  // ================= CONTINUOUS RECORDER =================
+  let mediaStream = null;
+  let mediaRecorder = null;
+  let chunks = [];
+  let recMime = "";
+  let recSeconds = 0;
+  let recClockId = null;
+  let finalUrl = null;
+  let onFinalReady = null;
+
+  function pickMime() {
+    const types = ["audio/webm", "audio/ogg", "audio/mp4"];
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported) {
+      for (const t of types) if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return "";
+  }
+
+  async function startContinuousRecording() {
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      return { ok: false, reason: "mic" };
+    }
+    chunks = [];
+    recSeconds = 0;
+    recMime = pickMime();
+    try {
+      mediaRecorder = new MediaRecorder(mediaStream, recMime ? { mimeType: recMime } : undefined);
+    } catch (err) {
+      return { ok: false, reason: "recorder" };
+    }
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: recMime || "audio/webm" });
+      finalUrl = URL.createObjectURL(blob);
+      if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+      if (onFinalReady) onFinalReady(finalUrl, blob);
+    };
+    mediaRecorder.start();
+    recClockId = setInterval(() => {
+      recSeconds++;
+      const c = $("recClock");
+      if (c) c.textContent = fmtTime(recSeconds);
+    }, 1000);
+    return { ok: true };
+  }
+
+  function stopContinuousRecording(cb) {
+    onFinalReady = cb;
+    clearInterval(recClockId);
+    const pill = $("recPill");
+    if (pill) {
+      pill.style.background = "#6b7886";
+      const dot = pill.querySelector(".dot");
+      if (dot) dot.style.animation = "none";
+      const w = $("recWord");
+      if (w) w.textContent = "SAVED";
+    }
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    } else if (cb) {
+      cb(null, null);
+    }
+  }
+
+  function fileExtFromMime(m) {
+    if (!m) return "webm";
+    if (m.includes("webm")) return "webm";
+    if (m.includes("ogg")) return "ogg";
+    if (m.includes("mp4")) return "m4a";
+    return "webm";
+  }
+
+  function autoDownload(url) {
+    const ext = fileExtFromMime(recMime);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const fname = "ielts-speaking-" + safeName(studentName) + "-" + stamp + "." + ext;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    return fname;
+  }
+
+  // ================= RENDER =================
+  function renderProgress() {
+    const bar = $("progress");
+    bar.innerHTML = "";
+    steps.forEach((s, i) => {
+      const seg = document.createElement("div");
+      seg.className = "seg" + (i < idx ? " done" : i === idx ? " active" : "");
+      bar.appendChild(seg);
+    });
+  }
+  function stepPositionLabel() {
+    const step = steps[idx];
+    const sameP = steps.filter((s) => s.part === step.part);
+    return { posInPart: sameP.indexOf(step) + 1, totalInPart: sameP.length };
+  }
+
+  function render() {
+    renderProgress();
+    if (idx >= steps.length) { renderSummary(); return; }
+    const step = steps[idx];
+    const { posInPart, totalInPart } = stepPositionLabel();
+    const stage = $("stage");
+    let html = "";
+
+    if (step.part === 1) {
+      html =
+        '<div class="stage-label">Part 1 — Introduction &amp; interview</div>' +
+        '<div class="card">' +
+          '<div class="card-head">' +
+            '<span class="tag">PART 1</span>' +
+            '<span class="topic">' + escapeHtml(step.topic) + '</span>' +
+            '<span class="count">Question ' + posInPart + ' of ' + totalInPart + '</span>' +
+          '</div>' +
+          '<div class="card-body">' +
+            '<div class="question">' + escapeHtml(step.text) + '</div>' +
+            '<div class="q-progress">Step ' + (idx + 1) + ' of ' + steps.length + '</div>' +
+          '</div>' +
+        '</div>';
+    } else {
+      let bullets = "";
+      step.bullets.forEach((b) => { bullets += '<li>' + escapeHtml(b) + '</li>'; });
+      html =
+        '<div class="stage-label">Part 2 — Individual long turn</div>' +
+        '<div class="card">' +
+          '<div class="card-head">' +
+            '<span class="tag">PART 2</span>' +
+            '<span class="topic">Cue card</span>' +
+            '<span class="count">Speak for 1–2 minutes</span>' +
+          '</div>' +
+          '<div class="card-body">' +
+            '<div class="prep-banner">⏱ 1 minute to prepare · then speak for 1–2 minutes</div>' +
+            '<div class="cue-prompt">' + escapeHtml(step.text) + '</div>' +
+            '<div class="cue-sub">You should say:</div>' +
+            '<ul class="cue-bullets">' + bullets + '</ul>' +
+          '</div>' +
+        '</div>';
+    }
+
+    const isLast = idx === steps.length - 1;
+    html +=
+      '<div class="nav-row">' +
+        '<button class="nav-btn" id="prevBtn"' + (idx === 0 ? " disabled" : "") + '>Back</button>' +
+        (isLast
+          ? '<button class="nav-btn finish" id="finishBtn">Finish &amp; save recording</button>'
+          : '<button class="nav-btn primary" id="nextBtn">Next question</button>') +
+      '</div>';
+
+    stage.innerHTML = html;
+    if ($("prevBtn")) $("prevBtn").addEventListener("click", () => { if (idx > 0) { idx--; render(); } });
+    if ($("nextBtn")) $("nextBtn").addEventListener("click", () => { idx++; render(); });
+    if ($("finishBtn")) $("finishBtn").addEventListener("click", finishTest);
+  }
+
+  // ================= FINISH =================
+  function finishTest() {
+    stopContinuousRecording((url) => {
+      let fname = "";
+      if (url) fname = autoDownload(url);
+      renderSummary(url, fname);
+    });
+  }
+
+  function renderSummary(url, fname) {
+    renderProgress();
+    $("progress").querySelectorAll(".seg").forEach((s) => { s.className = "seg done"; });
+
+    const audioBlock = url
+      ? '<audio class="done-audio" controls src="' + url + '"></audio>' +
+        '<div class="nav-row">' +
+          '<a class="nav-btn primary" style="text-align:center;text-decoration:none;line-height:1.4" ' +
+             'href="' + url + '" download="' + (fname || "ielts-speaking.webm") + '">Download again</a>' +
+          '<button class="nav-btn finish" id="againBtn">New test</button>' +
+        '</div>'
+      : '<p>The recording could not be saved (the microphone may have been unavailable).</p>' +
+        '<div class="nav-row"><button class="nav-btn finish" id="againBtn">New test</button></div>';
+
+    $("stage").innerHTML =
+      '<div class="card">' +
+        '<div class="card-head"><span class="tag">COMPLETE</span>' +
+          '<span class="topic">Test finished</span>' +
+          '<span class="count">' + fmtTime(recSeconds) + ' recorded</span>' +
+        '</div>' +
+        '<div class="card-body done-box">' +
+          '<div class="big">✓</div>' +
+          '<h2>Test complete</h2>' +
+          '<p>Candidate: <strong>' + escapeHtml(studentName) + '</strong></p>' +
+          (fname ? '<p>Saved as <strong>' + escapeHtml(fname) + '</strong> to your downloads.</p>' : "") +
+          audioBlock +
+        '</div>' +
+      '</div>';
+
+    if ($("againBtn")) $("againBtn").addEventListener("click", () => location.reload());
+  }
+
+  // ================= START FLOW =================
+  $("nameInput").addEventListener("keydown", (e) => { if (e.key === "Enter") $("beginBtn").click(); });
+
+  $("beginBtn").addEventListener("click", async () => {
+    const name = $("nameInput").value.trim();
+    if (!name) { $("startErr").classList.add("show"); $("nameInput").focus(); return; }
+    studentName = name;
+
+    $("start").classList.remove("active");
+    $("test").classList.add("active");
+    $("whoBar").textContent = "Candidate: " + studentName;
+
+    buildTest();
+    render();
+
+    const res = await startContinuousRecording();
+    if (!res.ok) {
+      const pill = $("recPill");
+      pill.style.background = "#6b7886";
+      const dot = pill.querySelector(".dot");
+      if (dot) dot.style.animation = "none";
+      $("recWord").textContent = "NO MIC";
+      const w = $("micWarn");
+      w.textContent =
+        "Recording could not start. The microphone was blocked or is unavailable. " +
+        "Recording needs mic permission and a secure context — open this file over " +
+        "https:// or localhost (many browsers block the microphone on file:// pages). " +
+        "You can still run through the questions, but no audio will be saved.";
+      w.classList.add("show");
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

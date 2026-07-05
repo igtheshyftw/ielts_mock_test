@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IELTS Academic — Full Mock Exam</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1a2b3c;
+    --paper: #ffffff;
+    --shell: #e8ecf0;
+    --band: #2d4a63;
+    --band-dark: #1e3447;
+    --rule: #c4ccd4;
+    --rule-soft: #dde3e9;
+    --accent: #b03a2e;
+    --accent-soft: #f4e4e2;
+    --muted: #6b7886;
+    --ok: #2e7d52;
+    --rec: #d0332c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    background: var(--shell); color: var(--ink); height: 100vh; overflow: hidden; font-size: 15px;
+  }
+  .screen { height: 100vh; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* scrollable centering wrapper for card screens */
+  .center-wrap {
+    height: 100vh; display: none; align-items: center; justify-content: center;
+    overflow-y: auto; padding: 30px 18px;
+  }
+  .center-wrap.active { display: flex; }
+
+  .card-shell {
+    background: var(--paper); width: 100%; max-width: 560px; border-radius: 8px;
+    border: 1px solid var(--rule); box-shadow: 0 14px 40px rgba(20,40,60,.12); overflow: hidden;
+  }
+  .card-head { background: var(--band-dark); color: #fff; padding: 22px 28px; border-bottom: 3px solid var(--accent); }
+  .card-head h1 { font-size: 20px; letter-spacing: .3px; margin-bottom: 3px; }
+  .card-head p { font-size: 13px; color: #c3cdd6; }
+  .card-body { padding: 26px 28px 28px; }
+
+  .form-label {
+    display: block; font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--muted); margin-bottom: 9px;
+  }
+  input.txt, textarea.txt {
+    width: 100%; border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px;
+    font-family: inherit; font-size: 15px; color: var(--ink);
+  }
+  input.txt:focus, textarea.txt:focus { outline: none; border-color: var(--band); }
+  .info-box {
+    background: #f6f8fa; border: 1px solid var(--rule); border-left: 4px solid var(--band);
+    padding: 13px 16px; border-radius: 5px; font-size: 13px; color: var(--muted);
+    line-height: 1.6; margin: 18px 0 20px;
+  }
+  .info-box strong { color: var(--ink); }
+  .err { color: var(--accent); font-size: 13px; margin-bottom: 14px; display: none; }
+  .err.show { display: block; }
+  .btn {
+    width: 100%; background: var(--accent); color: #fff; border: none; font-family: inherit;
+    font-weight: 700; font-size: 16px; padding: 14px; border-radius: 6px; cursor: pointer;
+  }
+  .btn:hover { background: #8f2e24; }
+  .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--rule); }
+  .btn.ghost:hover { background: #eef1f4; }
+  .btn.ok { background: var(--ok); }
+  .btn.ok:hover { background: #25623f; }
+
+  /* section roadmap on the intro/transition screens */
+  .roadmap { list-style: none; margin: 14px 0 8px; }
+  .roadmap li {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid var(--rule-soft); font-size: 14px;
+  }
+  .roadmap li:last-child { border-bottom: none; }
+  .roadmap .num {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--band); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .roadmap .nm { flex: 1; font-weight: 700; }
+  .roadmap .tm { color: var(--muted); font-size: 12.5px; }
+  .roadmap li.done .num { background: var(--ok); }
+  .roadmap li.current .num { background: var(--accent); }
+  .roadmap li.current .nm { color: var(--accent); }
+
+  /* ===== EXAM CHROME (shared by L/R/W section screens) ===== */
+  .exam-bar {
+    background: var(--band-dark); color: #fff; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 18px; height: 46px; flex-shrink: 0; border-bottom: 2px solid #0d1f2d;
+  }
+  .exam-bar .candidate { font-size: 13px; }
+  .exam-bar .section-name { font-weight: 700; letter-spacing: 1.2px; font-size: 14px; text-transform: uppercase; color: #d6dee5; }
+  .status-row {
+    background: var(--band); color: #fff; display: flex; align-items: center;
+    justify-content: space-between; padding: 0 18px; height: 44px; flex-shrink: 0;
+  }
+  .timer { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 700; }
+  .timer .clock {
+    font-variant-numeric: tabular-nums; background: rgba(255,255,255,.12);
+    padding: 4px 11px; border-radius: 3px; letter-spacing: 1px;
+  }
+  .timer.low .clock { background: var(--accent); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  .status-right { font-size: 12px; color: #c3cdd6; display: flex; align-items: center; gap: 12px; }
+  .status-right .rec-pill {
+    display: inline-flex; align-items: center; gap: 7px; background: var(--rec); color: #fff;
+    padding: 5px 12px; border-radius: 40px; font-size: 12px; font-weight: 700;
+  }
+  .status-right .rec-pill .dot { width: 9px; height: 9px; border-radius: 50%; background: #fff; animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  .workspace { display: flex; flex: 1; min-height: 0; background: var(--shell); }
+  .pane { background: var(--paper); overflow-y: auto; height: 100%; }
+  .pane.prompt { width: 40%; padding: 24px 28px; border-right: 6px solid var(--shell); }
+  .pane.answer { flex: 1; display: flex; flex-direction: column; padding: 0; }
+
+  .sec-tag {
+    display: inline-block; background: var(--accent-soft); color: var(--accent); font-size: 12px;
+    font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 4px 10px;
+    border-radius: 3px; margin-bottom: 14px;
+  }
+  .prompt h2 { font-size: 17px; margin-bottom: 10px; }
+  .prompt p { font-size: 14px; line-height: 1.6; margin-bottom: 12px; }
+  .prompt-note {
+    background: #f6f8fa; border: 1px solid var(--rule); border-left: 4px solid var(--band);
+    padding: 14px 16px; font-size: 14px; line-height: 1.6; margin-bottom: 14px; color: var(--muted);
+  }
+  .prompt-note strong { color: var(--ink); }
+  audio.player { width: 100%; margin: 6px 0 14px; }
+  .upload-row { margin-bottom: 14px; }
+  .upload-row label { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .min-words { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  .part-tabs { display: flex; background: #f0f3f6; flex-shrink: 0; border-bottom: 1px solid var(--rule); }
+  .part-tab {
+    flex: 1; padding: 9px 12px; border: none; background: #f0f3f6; border-right: 1px solid var(--rule);
+    cursor: pointer; font-family: inherit; font-size: 13px; color: var(--muted); text-align: center;
+  }
+  .part-tab:last-child { border-right: none; }
+  .part-tab.active { background: var(--paper); border-bottom: 3px solid var(--accent); color: var(--accent); font-weight: 700; }
+
+  .answer-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 10px 18px;
+    border-bottom: 1px solid var(--rule); flex-shrink: 0; background: #fafbfc;
+  }
+  .answer-head .lbl { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .word-count { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .word-count.under { color: var(--accent); }
+  .word-count.met { color: var(--ok); }
+
+  .editor {
+    flex: 1; width: 100%; border: none; outline: none; resize: none; padding: 20px 24px;
+    font-family: Arial, sans-serif; font-size: 16px; line-height: 1.8; color: var(--ink); background: var(--paper);
+    background-image: repeating-linear-gradient(transparent, transparent 28px, var(--rule-soft) 28px, var(--rule-soft) 29px);
+    background-attachment: local;
+  }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-top: 1px solid var(--rule);
+    background: #f0f3f6; flex-shrink: 0;
+  }
+  .toolbar button {
+    background: #fff; border: 1px solid var(--rule); color: var(--ink); width: 34px; height: 32px;
+    border-radius: 3px; cursor: pointer; font-family: inherit; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .toolbar button:hover:not(:disabled) { background: #e8ecf0; }
+  .toolbar button:disabled { opacity: .4; cursor: not-allowed; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .next-sec {
+    width: auto; padding: 0 20px; background: var(--ok); color: #fff; border-color: var(--ok);
+    font-weight: 700; font-size: 13px;
+  }
+  .toolbar .next-sec:hover { background: #25623f; }
+  .toolbar .hint { font-size: 11.5px; color: var(--muted); margin-right: 8px; }
+
+  /* speaking screen body */
+  .speaking-body { flex: 1; overflow-y: auto; background: var(--shell); padding: 22px 18px 50px; }
+  .speaking-inner { max-width: 700px; margin: 0 auto; }
+  .progress { display: flex; gap: 8px; margin-bottom: 20px; }
+  .progress .seg { flex: 1; height: 6px; border-radius: 3px; background: var(--rule); }
+  .progress .seg.done { background: var(--ok); }
+  .progress .seg.active { background: var(--accent); }
+  .sp-card { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+  .sp-card .ch { background: var(--band); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 10px; }
+  .sp-card .ch .tag { font-size: 12px; font-weight: 700; letter-spacing: 1px; background: rgba(255,255,255,.16); border-radius: 3px; padding: 2px 9px; }
+  .sp-card .ch .topic { font-size: 14px; font-weight: 700; text-transform: capitalize; }
+  .sp-card .ch .count { margin-left: auto; font-size: 11.5px; color: #c3cdd6; }
+  .sp-card .cb { padding: 22px 24px 24px; }
+  .sp-q { font-size: 18px; font-weight: 600; line-height: 1.45; }
+  .cue-prompt { font-size: 19px; font-weight: 700; line-height: 1.4; margin-bottom: 14px; }
+  .cue-sub { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  .cue-bullets { list-style: none; margin: 4px 0; }
+  .cue-bullets li { position: relative; padding: 6px 0 6px 22px; font-size: 15.5px; }
+  .cue-bullets li::before { content:""; position:absolute; left:4px; top:14px; width:6px; height:6px; border-radius:50%; background: var(--accent); }
+  .prep-banner {
+    background: var(--accent-soft); color: var(--accent); border-radius: 5px; padding: 10px 14px;
+    font-size: 13.5px; font-weight: 700; margin-bottom: 18px;
+  }
+  .nav-row { display: flex; gap: 12px; margin-top: 8px; }
+  .nav-btn {
+    flex: 1; font-family: inherit; font-size: 14px; font-weight: 700; padding: 12px; border-radius: 6px;
+    cursor: pointer; border: 1px solid var(--rule); background: #fff; color: var(--ink);
+  }
+  .nav-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .nav-btn.primary:hover { background: #8f2e24; }
+  .nav-btn.finish { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .nav-btn:disabled { opacity: .45; cursor: not-allowed; }
+  .mic-warn { background:#fff8e6; border:1px solid #e8d48a; color:#7a5b00; padding:12px 15px; border-radius:6px; font-size:13px; margin-bottom:18px; line-height:1.55; display:none; }
+  .mic-warn.show { display:block; }
+
+  .done-box { text-align: center; padding: 8px 0; }
+  .done-box .big { font-size: 44px; color: var(--ok); margin-bottom: 6px; }
+  .done-box h2 { font-size: 22px; margin-bottom: 10px; }
+  .done-box p { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
+
+  /* modal */
+  .overlay { position: fixed; inset: 0; background: rgba(15,30,45,.6); display: none; align-items: center; justify-content: center; z-index: 60; }
+  .overlay.show { display: flex; }
+  .modal { background:#fff; border-radius:6px; padding:26px 30px; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  .modal h2 { font-size: 19px; margin-bottom: 12px; }
+  .modal p { font-size: 14px; line-height: 1.6; color: var(--muted); margin-bottom: 8px; }
+  .modal .stat { color: var(--ink); font-weight: 700; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+  .modal-actions button { padding: 9px 18px; border-radius: 4px; border: 1px solid var(--rule); background: #fff; cursor: pointer; font-family: inherit; font-size: 14px; }
+  .modal-actions .confirm { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+
+  /* ===== WATERMARK ===== */
+  .watermark { position: fixed; inset: 0; pointer-events: none; z-index: 9999; overflow: hidden;
+    background-image: repeating-linear-gradient(-30deg, transparent 0, transparent 180px, rgba(120,130,140,0.06) 180px, rgba(120,130,140,0.06) 360px); }
+  .watermark::before {
+    content: "Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only · Michael Leon老师only";
+    position: absolute; top: -20%; left: -20%; width: 140%; height: 140%; transform: rotate(-30deg);
+    font-size: 30px; font-weight: 800; line-height: 2.6; letter-spacing: 1px;
+    color: rgba(120,130,140,0.10); word-spacing: 8px; white-space: normal; font-family: Arial, sans-serif;
+  }
+</style>
+</head>
+<body>
+
+  <!-- ================= 0. START / NAME ================= -->
+  <div class="center-wrap active" id="scr-start">
+    <div class="card-shell">
+      <div class="card-head">
+        <h1>IELTS Academic — Full Mock Exam</h1>
+        <p>Listening · Reading · Writing · Speaking</p>
+      </div>
+      <div class="card-body">
+        <label class="form-label" for="nameInput">Candidate name</label>
+        <input type="text" class="txt" id="nameInput" placeholder="Enter the candidate's full name" autocomplete="off" style="margin-bottom:6px">
+        <div class="info-box">
+          This full mock reproduces the real IELTS structure and timing. The
+          Listening, Reading and Writing sections run back-to-back with no break,
+          in that fixed order, followed by Speaking.
+          <ul class="roadmap" id="introRoadmap">
+            <li><span class="num">1</span><span class="nm">Listening</span><span class="tm">~30 min · 4 recordings</span></li>
+            <li><span class="num">2</span><span class="nm">Reading</span><span class="tm">60 min · 3 passages</span></li>
+            <li><span class="num">3</span><span class="nm">Writing</span><span class="tm">60 min · 2 tasks</span></li>
+            <li><span class="num">4</span><span class="nm">Speaking</span><span class="tm">~14 min · 3 parts · recorded</span></li>
+          </ul>
+          Question papers, passages and audio are provided by your examiner. Type
+          answers on screen; no autocorrect or keyboard shortcuts are available,
+          matching test conditions.
+        </div>
+        <div class="err" id="startErr">Please enter the candidate's name to begin.</div>
+        <button class="btn" id="beginBtn">Begin exam</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SECTION TRANSITION ================= -->
+  <div class="center-wrap" id="scr-transition">
+    <div class="card-shell">
+      <div class="card-head">
+        <h1 id="trTitle">Section</h1>
+        <p id="trSub">Get ready</p>
+      </div>
+      <div class="card-body">
+        <ul class="roadmap" id="trRoadmap"></ul>
+        <div class="info-box" id="trInfo"></div>
+        <button class="btn" id="trBtn">Start section</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LISTENING ================= -->
+  <div class="screen" id="scr-listening">
+    <div class="exam-bar">
+      <div class="candidate" id="lst-cand">Candidate: —</div>
+      <div class="section-name">Listening</div>
+    </div>
+    <div class="status-row">
+      <div class="timer" id="lst-timer"><span>Time remaining:</span><span class="clock" id="lst-clock">30:00</span></div>
+      <div class="status-right"><span>Section 1 of 1 · 40 questions</span></div>
+    </div>
+    <div class="workspace">
+      <div class="pane prompt">
+        <span class="sec-tag">Listening</span>
+        <h2>Four recordings, played once each</h2>
+        <div class="prompt-note">Load the examiner's audio below (or play it from the room speakers). In the real test each recording plays <strong>once only</strong>. Use the printed question paper for Parts 1–4 and write your answers in the answer area.</div>
+        <div class="upload-row">
+          <label>Examiner: load listening audio (optional)</label>
+          <input type="file" id="lst-audio-file" accept="audio/*">
+        </div>
+        <audio class="player" id="lst-audio" controls></audio>
+        <p class="min-words">40 answers · one per numbered question. In a real test, 10 extra minutes are given to transfer answers to the sheet.</p>
+      </div>
+      <div class="pane answer">
+        <div class="answer-head">
+          <span class="lbl">Your answers — number each line (1–40)</span>
+          <span class="word-count met" id="lst-count">Lines: 0</span>
+        </div>
+        <textarea class="editor" id="lst-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" placeholder="1. &#10;2. &#10;3. &#10;…"></textarea>
+        <div class="toolbar">
+          <button data-t="cut" title="Cut">✂</button>
+          <button data-t="copy" title="Copy">⧉</button>
+          <button data-t="paste" title="Paste">📋</button>
+          <button data-t="undo" title="Undo">↶</button>
+          <button data-t="redo" title="Redo">↷</button>
+          <div class="spacer"></div>
+          <span class="hint">No shortcuts · No autocorrect</span>
+          <button class="next-sec" id="lst-next">Finish Listening →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= READING ================= -->
+  <div class="screen" id="scr-reading">
+    <div class="exam-bar">
+      <div class="candidate" id="rd-cand">Candidate: —</div>
+      <div class="section-name">Reading</div>
+    </div>
+    <div class="status-row">
+      <div class="timer" id="rd-timer"><span>Time remaining:</span><span class="clock" id="rd-clock">60:00</span></div>
+      <div class="status-right"><span>3 passages · 40 questions</span></div>
+    </div>
+    <div class="workspace">
+      <div class="pane prompt">
+        <span class="sec-tag">Reading</span>
+        <h2>Three passages, forty questions</h2>
+        <div class="prompt-note">Read Passages 1–3 on your printed question paper. About <strong>20 minutes</strong> per passage is recommended. Write your answers (1–40) in the answer area.</div>
+        <p class="min-words">No extra transfer time is given in Reading — write answers directly.</p>
+      </div>
+      <div class="pane answer">
+        <div class="answer-head">
+          <span class="lbl">Your answers — number each line (1–40)</span>
+          <span class="word-count met" id="rd-count">Lines: 0</span>
+        </div>
+        <textarea class="editor" id="rd-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" placeholder="1. &#10;2. &#10;3. &#10;…"></textarea>
+        <div class="toolbar">
+          <button data-t="cut" title="Cut">✂</button>
+          <button data-t="copy" title="Copy">⧉</button>
+          <button data-t="paste" title="Paste">📋</button>
+          <button data-t="undo" title="Undo">↶</button>
+          <button data-t="redo" title="Redo">↷</button>
+          <div class="spacer"></div>
+          <span class="hint">No shortcuts · No autocorrect</span>
+          <button class="next-sec" id="rd-next">Finish Reading →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= WRITING ================= -->
+  <div class="screen" id="scr-writing">
+    <div class="exam-bar">
+      <div class="candidate" id="wr-cand">Candidate: —</div>
+      <div class="section-name">Writing</div>
+    </div>
+    <div class="status-row">
+      <div class="timer" id="wr-timer"><span>Time remaining:</span><span class="clock" id="wr-clock">60:00</span></div>
+      <div class="status-right"><span>Both tasks · one hour</span></div>
+    </div>
+    <div class="part-tabs" id="wr-tabs">
+      <button class="part-tab active" data-part="1">Task 1 · min 150 words</button>
+      <button class="part-tab" data-part="2">Task 2 · min 250 words</button>
+    </div>
+    <div class="workspace">
+      <div class="pane prompt" id="wr-prompt"></div>
+      <div class="pane answer">
+        <div class="answer-head">
+          <span class="lbl" id="wr-lbl">Your answer — Task 1</span>
+          <span class="word-count under" id="wr-count">Words: 0</span>
+        </div>
+        <textarea class="editor" id="wr-editor" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" data-gramm="false" placeholder="Begin typing your answer here…"></textarea>
+        <div class="toolbar">
+          <button data-t="cut" title="Cut">✂</button>
+          <button data-t="copy" title="Copy">⧉</button>
+          <button data-t="paste" title="Paste">📋</button>
+          <button data-t="undo" title="Undo">↶</button>
+          <button data-t="redo" title="Redo">↷</button>
+          <div class="spacer"></div>
+          <span class="hint">No shortcuts · No autocorrect</span>
+          <button class="next-sec" id="wr-next">Finish Writing →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SPEAKING ================= -->
+  <div class="screen" id="scr-speaking">
+    <div class="exam-bar">
+      <div class="candidate" id="sp-cand">Candidate: —</div>
+      <div class="section-name">Speaking</div>
+    </div>
+    <div class="status-row">
+      <div class="timer"><span>Recording:</span><span class="clock" id="sp-clock">00:00</span></div>
+      <div class="status-right">
+        <span class="rec-pill" id="sp-pill"><span class="dot"></span><span id="sp-recword">REC</span></span>
+      </div>
+    </div>
+    <div class="speaking-body">
+      <div class="speaking-inner">
+        <div class="progress" id="sp-progress"></div>
+        <div class="mic-warn" id="sp-micwarn"></div>
+        <div id="sp-stage"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FINISH ================= -->
+  <div class="center-wrap" id="scr-finish">
+    <div class="card-shell">
+      <div class="card-head"><h1>Exam complete</h1><p>All four sections finished</p></div>
+      <div class="card-body">
+        <div class="done-box">
+          <div class="big">✓</div>
+          <h2 id="fin-name">Candidate</h2>
+          <p id="fin-detail"></p>
+        </div>
+        <div id="fin-actions" style="display:flex; flex-direction:column; gap:10px; margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL ================= -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2 id="modalTitle"></h2>
+      <p id="modalBody"></p>
+      <div class="modal-actions">
+        <button id="modalCancel">Cancel</button>
+        <button class="confirm" id="modalConfirm">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= WATERMARK ================= -->
+  <div class="watermark" aria-hidden="true"></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+
+  // ================= GLOBAL STATE =================
+  const state = {
+    name: "",
+    listening: "",
+    reading: "",
+    writing: { 1: "", 2: "" },
+    speakingUrl: null,
+    speakingBlob: null,
+    speakingMime: "",
+    speakingSecs: 0
+  };
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+  function fmt(s) { const m=Math.floor(s/60),x=s%60; return String(m).padStart(2,"0")+":"+String(x).padStart(2,"0"); }
+  function safeName(s){ return (s||"candidate").trim().replace(/[^a-z0-9]+/gi,"-").replace(/^-+|-+$/g,"").toLowerCase()||"candidate"; }
+
+  function show(id) {
+    document.querySelectorAll(".screen, .center-wrap").forEach((el) => el.classList.remove("active"));
+    $(id).classList.add("active");
+  }
+
+  // ================= EDITOR BEHAVIOUR (no autocorrect / no shortcuts) =================
+  function hardenEditor(ed) {
+    ed.addEventListener("keydown", (e) => { if (e.ctrlKey||e.metaKey||e.altKey){ e.preventDefault(); e.stopPropagation(); } });
+    ed.addEventListener("contextmenu", (e) => e.preventDefault());
+    ["paste","cut","copy"].forEach((ev)=> ed.addEventListener(ev,(e)=>e.preventDefault()));
+    ed.addEventListener("drop", (e)=> e.preventDefault());
+  }
+
+  // Simple per-editor toolbar (internal clipboard + undo/redo)
+  function makeToolbar(screenEl, ed, onChange) {
+    let clip = "";
+    const hist = [""]; let hp = 0; let t = null;
+    function sel(){ return { s: ed.selectionStart, e: ed.selectionEnd }; }
+    function pushHist(){ hist.length = hp+1; hist.push(ed.value); if(hist.length>200)hist.shift(); hp=hist.length-1; refresh(); }
+    function refresh(){
+      const u = screenEl.querySelector('[data-t="undo"]'); const r = screenEl.querySelector('[data-t="redo"]');
+      if(u) u.disabled = hp<=0; if(r) r.disabled = hp>=hist.length-1;
+    }
+    function replaceSel(text){
+      const {s,e}=sel(); const v=ed.value; ed.value=v.slice(0,s)+text+v.slice(e);
+      const p=s+text.length; ed.setSelectionRange(p,p); pushHist(); if(onChange)onChange(); ed.focus();
+    }
+    ed.addEventListener("input", ()=>{ clearTimeout(t); t=setTimeout(pushHist,350); if(onChange)onChange(); });
+    screenEl.querySelectorAll(".toolbar button[data-t]").forEach((btn)=>{
+      const kind = btn.dataset.t;
+      btn.addEventListener("click", ()=>{
+        if(kind==="cut"){ const {s,e}=sel(); if(s===e)return; clip=ed.value.slice(s,e); replaceSel(""); }
+        else if(kind==="copy"){ const {s,e}=sel(); if(s===e)return; clip=ed.value.slice(s,e); ed.focus(); }
+        else if(kind==="paste"){ if(clip) replaceSel(clip); }
+        else if(kind==="undo"){ if(hp>0){ hp--; ed.value=hist[hp]; if(onChange)onChange(); refresh(); ed.focus(); } }
+        else if(kind==="redo"){ if(hp<hist.length-1){ hp++; ed.value=hist[hp]; if(onChange)onChange(); refresh(); ed.focus(); } }
+      });
+    });
+    refresh();
+  }
+
+  function countWords(t){ const x=t.trim(); return x?x.split(/\s+/).length:0; }
+  function countLines(t){ return t.split("\n").filter((l)=>l.trim()!=="").length; }
+
+  // ================= COUNTDOWN TIMER FACTORY =================
+  function makeTimer(clockEl, timerWrap, seconds, onExpire) {
+    let remaining = seconds, running = false, id = null;
+    function render(){ clockEl.textContent = fmt(remaining); timerWrap.classList.toggle("low", remaining<=300); }
+    return {
+      start(){ running=true; render(); clearInterval(id); id=setInterval(()=>{ if(!running)return; remaining=Math.max(0,remaining-1); render(); if(remaining===0){ running=false; clearInterval(id); onExpire&&onExpire(); } },1000); },
+      stop(){ running=false; clearInterval(id); },
+      render
+    };
+  }
+
+  // ================= MODAL =================
+  let confirmAction = null;
+  function modal(title, body, confirmText, action, cancelText) {
+    $("modalTitle").textContent = title;
+    $("modalBody").innerHTML = body;
+    $("modalConfirm").textContent = confirmText;
+    confirmAction = action;
+    $("modalConfirm").style.display = action ? "" : "none";
+    $("modalCancel").style.display = action ? "" : "none";
+    $("modalCancel").textContent = cancelText || "Cancel";
+    $("overlay").classList.add("show");
+  }
+  function closeModal(){ $("overlay").classList.remove("show"); }
+  $("modalCancel").addEventListener("click", closeModal);
+  $("modalConfirm").addEventListener("click", ()=>{ if(confirmAction)confirmAction(); closeModal(); });
+
+  // ================= SEQUENCE CONTROLLER =================
+  const SECTIONS = [
+    { key:"listening", name:"Listening", time:"about 30 minutes", detail:"You will hear four recordings, each played once. Use the printed question paper and type your 40 answers." },
+    { key:"reading",   name:"Reading",   time:"60 minutes", detail:"Three passages with 40 questions in total. Around 20 minutes per passage is recommended." },
+    { key:"writing",   name:"Writing",   time:"60 minutes", detail:"Two tasks in one hour: Task 1 (min 150 words) and Task 2 (min 250 words). Switch freely between them." },
+    { key:"speaking",  name:"Speaking",  time:"about 14 minutes", detail:"Three parts. Recording starts when the section begins and the full audio downloads automatically at the end." }
+  ];
+  let secIndex = 0;
+
+  function buildRoadmap(ul, currentKey) {
+    ul.innerHTML = "";
+    SECTIONS.forEach((s, i) => {
+      const li = document.createElement("li");
+      const done = i < secIndex, cur = s.key === currentKey;
+      li.className = done ? "done" : (cur ? "current" : "");
+      li.innerHTML = '<span class="num">'+(done?"✓":(i+1))+'</span>' +
+        '<span class="nm">'+s.name+'</span><span class="tm">'+s.time+'</span>';
+      ul.appendChild(li);
+    });
+  }
+
+  function goToTransition(i) {
+    secIndex = i;
+    const s = SECTIONS[i];
+    $("trTitle").textContent = (i+1) + ". " + s.name;
+    $("trSub").textContent = "Section " + (i+1) + " of 4";
+    buildRoadmap($("trRoadmap"), s.key);
+    $("trInfo").innerHTML = "<strong>" + s.name + " — " + s.time + ".</strong><br>" + s.detail;
+    $("trBtn").textContent = "Start " + s.name;
+    show("scr-transition");
+  }
+  $("trBtn").addEventListener("click", () => startSection(SECTIONS[secIndex].key));
+
+  function startSection(key) {
+    if (key === "listening") startListening();
+    else if (key === "reading") startReading();
+    else if (key === "writing") startWriting();
+    else if (key === "speaking") startSpeaking();
+  }
+  function finishSectionAdvance() {
+    if (secIndex < SECTIONS.length - 1) goToTransition(secIndex + 1);
+    else finishExam();
+  }
+
+  // ================= LISTENING =================
+  let lstTimer;
+  function startListening() {
+    show("scr-listening");
+    $("lst-cand").textContent = "Candidate: " + state.name;
+    const ed = $("lst-editor");
+    ed.value = state.listening;
+    const upd = () => { $("lst-count").textContent = "Lines: " + countLines(ed.value); };
+    upd();
+    lstTimer = makeTimer($("lst-clock"), $("lst-timer"), 30*60, () => {
+      modal("Listening time ended","Move on to the Reading section.","Continue → Reading", ()=>{ state.listening=ed.value; finishSectionAdvance(); });
+    });
+    lstTimer.start();
+    $("lst-audio-file").onchange = (e) => {
+      const f = e.target.files[0]; if (f) $("lst-audio").src = URL.createObjectURL(f);
+    };
+    $("lst-next").onclick = () => {
+      modal("Finish Listening?","Your answers will be saved and the Reading section will begin.","Finish → Reading",
+        ()=>{ state.listening=ed.value; lstTimer.stop(); finishSectionAdvance(); });
+    };
+  }
+
+  // ================= READING =================
+  let rdTimer;
+  function startReading() {
+    show("scr-reading");
+    $("rd-cand").textContent = "Candidate: " + state.name;
+    const ed = $("rd-editor");
+    ed.value = state.reading;
+    const upd = () => { $("rd-count").textContent = "Lines: " + countLines(ed.value); };
+    upd();
+    rdTimer = makeTimer($("rd-clock"), $("rd-timer"), 60*60, () => {
+      modal("Reading time ended","Move on to the Writing section.","Continue → Writing", ()=>{ state.reading=ed.value; finishSectionAdvance(); });
+    });
+    rdTimer.start();
+    $("rd-next").onclick = () => {
+      modal("Finish Reading?","Your answers will be saved and the Writing section will begin.","Finish → Writing",
+        ()=>{ state.reading=ed.value; rdTimer.stop(); finishSectionAdvance(); });
+    };
+  }
+
+  // ================= WRITING =================
+  let wrTimer, wrPart = 1;
+  const WR = { 1:{min:150,sug:20}, 2:{min:250,sug:40} };
+  function wrPromptHtml(part){
+    const t = WR[part];
+    return '<span class="sec-tag">Writing Task '+part+'</span>'+
+      '<h2>Task '+part+'</h2>'+
+      '<p>You should spend about <strong>'+t.sug+' minutes</strong> on this task.</p>'+
+      '<div class="prompt-note">Refer to <strong>Task '+part+'</strong> on your printed question paper, then write your response in the answer area.</div>'+
+      '<p class="min-words">Write at least '+t.min+' words.</p>';
+  }
+  function startWriting() {
+    show("scr-writing");
+    $("wr-cand").textContent = "Candidate: " + state.name;
+    const ed = $("wr-editor");
+    wrPart = 1;
+    $("wr-prompt").innerHTML = wrPromptHtml(1);
+    ed.value = state.writing[1];
+    const upd = () => {
+      const n = countWords(ed.value); const min = WR[wrPart].min;
+      const c = $("wr-count"); c.textContent = "Words: " + n;
+      c.classList.toggle("met", n>=min); c.classList.toggle("under", n<min);
+    };
+    upd();
+    // hook input for word count (toolbar already wired once globally below)
+    ed.oninput = upd;
+    $("wr-tabs").onclick = (e) => {
+      const tab = e.target.closest(".part-tab"); if(!tab) return;
+      state.writing[wrPart] = ed.value;
+      wrPart = Number(tab.dataset.part);
+      $("wr-prompt").innerHTML = wrPromptHtml(wrPart);
+      $("wr-lbl").textContent = "Your answer — Task " + wrPart;
+      ed.value = state.writing[wrPart];
+      document.querySelectorAll("#wr-tabs .part-tab").forEach((x)=> x.classList.toggle("active", x.dataset.part===String(wrPart)));
+      upd(); ed.focus();
+    };
+    wrTimer = makeTimer($("wr-clock"), $("wr-timer"), 60*60, () => {
+      state.writing[wrPart]=ed.value;
+      modal("Writing time ended","Move on to the Speaking section.","Continue → Speaking", ()=>{ finishSectionAdvance(); });
+    });
+    wrTimer.start();
+    $("wr-next").onclick = () => {
+      state.writing[wrPart]=ed.value;
+      const w1=countWords(state.writing[1]), w2=countWords(state.writing[2]);
+      modal("Finish Writing?",
+        'Task 1: <span class="stat">'+w1+' words</span> (min 150)<br>Task 2: <span class="stat">'+w2+' words</span> (min 250)<br><br>The Speaking section will begin next.',
+        "Finish → Speaking", ()=>{ wrTimer.stop(); finishSectionAdvance(); });
+    };
+  }
+
+  // ================= SPEAKING =================
+  const PART1 = {
+    "Hometown":["Where is your hometown?","What is your hometown known for?","Do you like your hometown? Why or why not?","Would you recommend your hometown to a visitor?","What do you like most about your hometown?"],
+    "Work or Studies":["Do you work or are you a student?","Why did you choose that subject or job?","What do you find most interesting about it?","What would you like to do in the future?","Do you prefer working alone or in a team?"],
+    "Hobbies & Free Time":["What do you usually do in your free time?","How did you become interested in your hobby?","Do you prefer to spend free time alone or with others?","Is there a new hobby you would like to try?","Do you have enough free time these days?"],
+    "Food & Cooking":["What kind of food do you like?","Do you enjoy cooking?","Do you prefer eating at home or in restaurants?","Have your eating habits changed in recent years?","What food would you recommend to a visitor?"],
+    "Technology":["How often do you use the internet?","What do you mainly use your phone for?","How has technology changed your daily life?","What app do you find most useful?","Do you think technology makes people less social?"],
+    "Weather & Seasons":["What's the weather like in your country?","What is your favourite season of the year?","Do you prefer hot or cold weather?","What do you usually do on a rainy day?","Is there a season you dislike? Why?"],
+    "Travel & Transport":["How do you usually travel to work or school?","Do you prefer public transport or driving?","What kind of places do you like to visit?","Is there a country you would love to visit?","How has transport changed in your country?"],
+    "Daily Routine":["What does your typical day look like?","Are you a morning person or a night person?","Do you prefer weekdays or weekends?","What is the most important part of your day?","What do you usually do before going to bed?"]
+  };
+  const PART2 = [
+    { prompt:"Describe a person you admire.", bullets:["who this person is","how you know them","what qualities they have","and explain why you admire them."] },
+    { prompt:"Describe a place you have visited that you found memorable.", bullets:["where it is","when you went there","what you did there","and explain why it was memorable."] },
+    { prompt:"Describe something you own that is important to you.", bullets:["what it is","how you got it","how long you have had it","and explain why it is important to you."] },
+    { prompt:"Describe a skill you would like to learn.", bullets:["what the skill is","how you would learn it","how long it might take","and explain why you want to learn it."] },
+    { prompt:"Describe a happy memory from your childhood.", bullets:["what the memory is","when it happened","who was involved","and explain why it makes you happy."] },
+    { prompt:"Describe a celebration or event you enjoyed.", bullets:["what the event was","where it took place","who you were with","and explain why you enjoyed it."] }
+  ];
+  const PART3 = {
+    "Describe a person you admire.":["What qualities make someone a good role model?","Are celebrities good role models for children?","Do parents or teachers have more influence on children?","How has the idea of a hero changed over time?"],
+    "Describe a place you have visited that you found memorable.":["Why do people enjoy travelling to new places?","How does tourism affect local communities?","Should famous natural places limit visitors?","Is it important to preserve historical places?"],
+    "Describe something you own that is important to you.":["Why do people become attached to objects?","Do people own too many things these days?","Is it better to repair things or replace them?","Do advertisements make people want things they don't need?"],
+    "Describe a skill you would like to learn.":["Why is it important to keep learning as an adult?","Should schools teach more practical skills?","Is it easier to learn skills when young?","Will people need different skills in the future?"],
+    "Describe a happy memory from your childhood.":["Why do people remember some events more than others?","Are childhood memories reliable?","Is it good to look back on the past often?","Do you think people are more nostalgic as they age?"],
+    "Describe a celebration or event you enjoyed.":["Why are festivals important to a society?","Have celebrations changed over the years?","Do people spend too much on celebrations?","How do celebrations bring communities together?"]
+  };
+
+  function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+  let spSteps = [], spIdx = 0;
+  function buildSpeaking() {
+    spSteps = []; spIdx = 0;
+    // Part 1: 2 topics x 4 questions
+    shuffle(Object.keys(PART1)).slice(0,2).forEach((topic)=>{
+      shuffle(PART1[topic]).slice(0,4).forEach((q)=> spSteps.push({part:1,topic,text:q}));
+    });
+    // Part 2 cue
+    const cue = pick(PART2);
+    spSteps.push({part:2,topic:"Individual long turn",text:cue.prompt,bullets:cue.bullets});
+    // Part 3: linked discussion, 4 questions
+    (PART3[cue.prompt]||[]).forEach((q)=> spSteps.push({part:3,topic:"Discussion",text:q}));
+  }
+
+  // continuous recorder
+  let stream=null, recorder=null, chunks=[], recMime="", recSecs=0, recId=null, onFinal=null;
+  function pickMime(){ const ts=["audio/webm","audio/ogg","audio/mp4"]; if(window.MediaRecorder&&MediaRecorder.isTypeSupported){ for(const t of ts) if(MediaRecorder.isTypeSupported(t))return t; } return ""; }
+  async function startRec(){
+    try { stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e){ return {ok:false}; }
+    chunks=[]; recSecs=0; recMime=pickMime();
+    try { recorder = new MediaRecorder(stream, recMime?{mimeType:recMime}:undefined); }
+    catch(e){ return {ok:false}; }
+    recorder.ondataavailable=(e)=>{ if(e.data.size>0)chunks.push(e.data); };
+    recorder.onstop=()=>{ const blob=new Blob(chunks,{type:recMime||"audio/webm"}); state.speakingBlob=blob; state.speakingMime=recMime||"audio/webm"; state.speakingUrl=URL.createObjectURL(blob); if(stream)stream.getTracks().forEach((t)=>t.stop()); if(onFinal)onFinal(state.speakingUrl); };
+    recorder.start();
+    recId=setInterval(()=>{ recSecs++; state.speakingSecs=recSecs; const c=$("sp-clock"); if(c)c.textContent=fmt(recSecs); },1000);
+    return {ok:true};
+  }
+  function stopRec(cb){ onFinal=cb; clearInterval(recId); const p=$("sp-pill"); if(p){ p.style.background="#6b7886"; const d=p.querySelector(".dot"); if(d)d.style.animation="none"; $("sp-recword").textContent="SAVED"; } if(recorder&&recorder.state!=="inactive")recorder.stop(); else if(cb)cb(null); }
+  function extFor(m){ if(!m)return"webm"; if(m.includes("webm"))return"webm"; if(m.includes("ogg"))return"ogg"; if(m.includes("mp4"))return"m4a"; return"webm"; }
+  function autoDownloadAudio(url){
+    const ext=extFor(recMime); const stamp=new Date().toISOString().slice(0,10);
+    const fname="ielts-speaking-"+safeName(state.name)+"-"+stamp+"."+ext;
+    const a=document.createElement("a"); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    return fname;
+  }
+
+  async function startSpeaking() {
+    show("scr-speaking");
+    $("sp-cand").textContent = "Candidate: " + state.name;
+    buildSpeaking();
+    renderSpeaking();
+    const res = await startRec();
+    if(!res.ok){
+      const p=$("sp-pill"); p.style.background="#6b7886"; const d=p.querySelector(".dot"); if(d)d.style.animation="none"; $("sp-recword").textContent="NO MIC";
+      const w=$("sp-micwarn");
+      w.textContent="Recording could not start — the microphone was blocked or is unavailable. Recording needs mic permission and a secure context (https:// or localhost). You can still run the section, but no audio will be saved.";
+      w.classList.add("show");
+    }
+  }
+
+  function renderSpeaking() {
+    // progress
+    const bar=$("sp-progress"); bar.innerHTML="";
+    spSteps.forEach((s,i)=>{ const seg=document.createElement("div"); seg.className="seg"+(i<spIdx?" done":i===spIdx?" active":""); bar.appendChild(seg); });
+
+    const stage=$("sp-stage");
+    if(spIdx>=spSteps.length){ return; }
+    const step=spSteps[spIdx];
+    const same=spSteps.filter((s)=>s.part===step.part);
+    const pos=same.indexOf(step)+1;
+    let html="";
+    if(step.part===2){
+      let b=""; step.bullets.forEach((x)=> b+='<li>'+escapeHtml(x)+'</li>');
+      html='<div class="sp-card"><div class="ch"><span class="tag">PART 2</span><span class="topic">Cue card</span><span class="count">1 min prep · 1–2 min talk</span></div>'+
+        '<div class="cb"><div class="prep-banner">⏱ 1 minute to prepare, then speak for 1–2 minutes</div>'+
+        '<div class="cue-prompt">'+escapeHtml(step.text)+'</div><div class="cue-sub">You should say:</div><ul class="cue-bullets">'+b+'</ul></div></div>';
+    } else {
+      const tag = step.part===1?"PART 1":"PART 3";
+      const topic = step.part===1?step.topic:"Discussion";
+      html='<div class="sp-card"><div class="ch"><span class="tag">'+tag+'</span><span class="topic">'+escapeHtml(topic)+'</span><span class="count">Q '+pos+' of '+same.length+'</span></div>'+
+        '<div class="cb"><div class="sp-q">'+escapeHtml(step.text)+'</div></div></div>';
+    }
+    const last = spIdx===spSteps.length-1;
+    html+='<div class="nav-row"><button class="nav-btn" id="sp-prev"'+(spIdx===0?" disabled":"")+'>Back</button>'+
+      (last?'<button class="nav-btn finish" id="sp-finish">Finish exam &amp; save recording</button>':'<button class="nav-btn primary" id="sp-next">Next</button>')+'</div>';
+    stage.innerHTML=html;
+    if($("sp-prev")) $("sp-prev").onclick=()=>{ if(spIdx>0){spIdx--; renderSpeaking();} };
+    if($("sp-next")) $("sp-next").onclick=()=>{ spIdx++; renderSpeaking(); };
+    if($("sp-finish")) $("sp-finish").onclick=()=>{
+      stopRec((url)=>{ let fn=""; if(url) fn=autoDownloadAudio(url); finishExam(fn); });
+    };
+  }
+
+  // ================= WRITING/ANSWERS PDF =================
+  function generateTranscriptPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:"pt", format:"a4" });
+    const pageW=doc.internal.pageSize.getWidth(), pageH=doc.internal.pageSize.getHeight();
+    const margin=56, contentW=pageW-margin*2; let y=margin;
+    function ensure(n){ if(y+n>pageH-margin){ doc.addPage(); y=margin; } }
+    function wl(text,size,style,gap,color){ doc.setFont("helvetica",style||"normal"); doc.setFontSize(size); doc.setTextColor.apply(doc,color||[26,43,60]); const lines=doc.splitTextToSize(text,contentW); const lh=size*gap; lines.forEach((ln)=>{ ensure(lh); doc.text(ln,margin,y); y+=lh; }); }
+    function rule(){ ensure(14); doc.setDrawColor(196,204,212); doc.setLineWidth(0.7); doc.line(margin,y,pageW-margin,y); y+=14; }
+    function header(){
+      doc.setFillColor(30,52,71); doc.rect(0,0,pageW,64,"F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.setTextColor(255,255,255);
+      doc.text("IELTS Academic — Full Mock · Answer Record", margin, 34);
+      doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(214,222,229);
+      doc.text("Candidate: "+state.name+"   ·   Generated: "+new Date().toLocaleString(), margin, 50);
+      y=92;
+    }
+    header();
+    wl("LISTENING — answers",12,"bold",1.4,[176,58,46]); y+=2; rule();
+    wl(state.listening.trim()||"[No answers recorded]",10.5,"normal",1.5); y+=10;
+    ensure(30);
+    wl("READING — answers",12,"bold",1.4,[176,58,46]); y+=2; rule();
+    wl(state.reading.trim()||"[No answers recorded]",10.5,"normal",1.5); y+=10;
+    ensure(30);
+    wl("WRITING TASK 1  (Words: "+countWords(state.writing[1])+")",12,"bold",1.4,[176,58,46]); y+=2; rule();
+    wl(state.writing[1].trim()||"[No response]",11,"normal",1.5); y+=10;
+    ensure(30);
+    wl("WRITING TASK 2  (Words: "+countWords(state.writing[2])+")",12,"bold",1.4,[176,58,46]); y+=2; rule();
+    wl(state.writing[2].trim()||"[No response]",11,"normal",1.5); y+=10;
+
+    // watermark + page numbers
+    const pages=doc.internal.getNumberOfPages();
+    for(let p=1;p<=pages;p++){
+      doc.setPage(p);
+      doc.setFont("helvetica","bold"); doc.setFontSize(24); doc.setTextColor(205,210,215);
+      if(typeof doc.setGState==="function") doc.setGState(new doc.GState({opacity:0.16}));
+      for(let row=-1;row<14;row++){ for(let col=-1;col<4;col++){ doc.text("Michael Leon laoshi only", col*250-40, row*70+30, {angle:30}); } }
+      if(typeof doc.setGState==="function") doc.setGState(new doc.GState({opacity:1}));
+      doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(150,160,170);
+      doc.text("Page "+p+" of "+pages, pageW-margin, pageH-24, {align:"right"});
+    }
+    const stamp=new Date().toISOString().slice(0,10);
+    doc.save("IELTS-answers-"+safeName(state.name)+"-"+stamp+".pdf");
+  }
+
+  // ================= FINISH =================
+  function finishExam(audioFname) {
+    show("scr-finish");
+    $("fin-name").textContent = state.name;
+    const bits = [];
+    bits.push("Listening &amp; Reading answers recorded.");
+    bits.push("Writing: Task 1 " + countWords(state.writing[1]) + " words · Task 2 " + countWords(state.writing[2]) + " words.");
+    if (audioFname) bits.push("Speaking audio saved as <strong>"+escapeHtml(audioFname)+"</strong>.");
+    $("fin-detail").innerHTML = bits.join("<br>");
+
+    const wrap = $("fin-actions"); wrap.innerHTML = "";
+    const pdfBtn = document.createElement("button");
+    pdfBtn.className = "btn"; pdfBtn.textContent = "Download answer record (PDF)";
+    pdfBtn.onclick = generateTranscriptPDF; wrap.appendChild(pdfBtn);
+
+    if (state.speakingUrl) {
+      const aud = document.createElement("audio"); aud.controls = true; aud.src = state.speakingUrl; aud.style.width="100%";
+      wrap.appendChild(aud);
+      const dl = document.createElement("a");
+      dl.className = "btn ok"; dl.textContent = "Download speaking audio again"; dl.style.textAlign="center"; dl.style.textDecoration="none"; dl.style.lineHeight="1.4";
+      dl.href = state.speakingUrl; dl.download = audioFname || ("ielts-speaking-"+safeName(state.name)+".webm");
+      wrap.appendChild(dl);
+    }
+    const again = document.createElement("button");
+    again.className = "btn ghost"; again.textContent = "New exam"; again.onclick = ()=> location.reload();
+    wrap.appendChild(again);
+
+    // auto-download the answer PDF too
+    try { generateTranscriptPDF(); } catch(e){ /* jsPDF may be offline */ }
+  }
+
+  // ================= WIRE EDITORS ONCE =================
+  ["lst-editor","rd-editor","wr-editor"].forEach((id)=>{ const ed=$(id); hardenEditor(ed); });
+  makeToolbar($("scr-listening"), $("lst-editor"), ()=>{ $("lst-count").textContent="Lines: "+countLines($("lst-editor").value); });
+  makeToolbar($("scr-reading"),   $("rd-editor"),  ()=>{ $("rd-count").textContent="Lines: "+countLines($("rd-editor").value); });
+  makeToolbar($("scr-writing"),   $("wr-editor"),  ()=>{ /* word count handled in startWriting oninput */
+    const ev = new Event("input"); $("wr-editor").dispatchEvent(ev); });
+
+  // ================= START =================
+  $("nameInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") $("beginBtn").click(); });
+  $("beginBtn").addEventListener("click", ()=>{
+    const name = $("nameInput").value.trim();
+    if(!name){ $("startErr").classList.add("show"); $("nameInput").focus(); return; }
+    state.name = name;
+    document.querySelectorAll(".candidate").forEach((el)=> el.textContent = "Candidate: " + name);
+    goToTransition(0);
+  });
+
+})();
+</script>
+</body>
+</html>

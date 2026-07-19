@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>IELTS-Style Computer Practice Simulator</title>
+    <title>IELTS-Style Computer Practice Simulator — Native PDF Export</title>
     <style>
       :root {
         --navy: #152534;
@@ -725,7 +725,7 @@
       <div class="landing-card">
         <div class="brand-strip">
           <h1>IELTS-Style Computer Practice Simulator</h1>
-          <p>Academic practice • 10 advanced mock sets • Listening, Reading, Writing and Speaking</p>
+          <p>Academic practice • 10 advanced mock sets • Listening, Reading, Writing and Speaking • Native PDF print export</p>
         </div>
         <div class="landing-body">
           <div class="grid2">
@@ -1760,7 +1760,7 @@
         if (state.submitted.speaking)
           cards += `<div class="result-card"><h2>Speaking</h2><p>${Object.keys(speakingRecordings).length} part recording(s) available in this session.</p>${rubricHTML("Speaking")}</div>`;
         $("#main").innerHTML =
-          `<section class="pane single-pane"><div class="results"><h1>Practice completed</h1><p><b>${esc(state.setName)}</b></p>${cards}<div class="result-card"><button class="primary" id="newTest">Start a new test</button> <button class="secondary" id="exportResults">Export results</button><p class="footer-note">This simulator is independently produced for practice and is not affiliated with IELTS, British Council, IDP or Cambridge University Press & Assessment.</p></div></div></section>`;
+          `<section class="pane single-pane"><div class="results"><h1>Practice completed</h1><p><b>${esc(state.setName)}</b></p>${cards}<div class="result-card"><button class="primary" id="newTest">Start a new test</button> <button class="secondary" id="exportResults">Export results as PDF</button><p class="small"><b>PDF export:</b> opens the browser print dialog. Select <b>Save as PDF</b>; no JSON file is generated.</p><p class="footer-note">This simulator is independently produced for practice and is not affiliated with IELTS, British Council, IDP or Cambridge University Press & Assessment. PDF export uses the browser's native print engine.</p></div></div></section>`;
         $("#bottom").innerHTML = "";
         $$("[data-detail]").forEach(
           (b) => (b.onclick = () => showAnswerDetail(b.dataset.detail)),
@@ -1822,23 +1822,250 @@
         );
       }
       function exportResults() {
-        const payload = {
-          candidate: state.candidate,
-          setIndex: state.setIndex,
-          setName: state.setName,
-          number: state.number,
-          date: new Date().toISOString(),
-          results: state.results,
-          writing: state.writing,
-        };
-        const blob = new Blob([JSON.stringify(payload, null, 2)], {
-          type: "application/json",
-        });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "ielts-practice-results.json";
-        a.click();
-        URL.revokeObjectURL(a.href);
+        const exportButton = $("#exportResults");
+        const originalLabel = exportButton ? exportButton.textContent : "Export results as PDF";
+        if (exportButton) {
+          exportButton.disabled = true;
+          exportButton.textContent = "Opening PDF report...";
+        }
+
+        try {
+          const reportWindow = window.open("", "_blank");
+          if (!reportWindow) {
+            throw new Error("The browser blocked the report window. Allow pop-ups for this local file and try again.");
+          }
+
+          const stripHTML = (html) => {
+            const holder = document.createElement("div");
+            holder.innerHTML = String(html || "");
+            return (holder.textContent || holder.innerText || "").replace(/\s+/g, " ").trim();
+          };
+          const displayValue = (value) => {
+            const text = String(value ?? "").trim();
+            return text || "—";
+          };
+          const setNumber = (state.setIndex ?? 0) + 1;
+          const safeCandidate = (state.candidate || "Candidate")
+            .replace(/[^a-z0-9\u3400-\u9fff]+/gi, "-")
+            .replace(/^-+|-+$/g, "") || "Candidate";
+          const reportTitle = `IELTS-${safeCandidate}-Mock-Set-${setNumber}-Results`;
+          const generatedAt = new Date().toLocaleString();
+
+          const scoreCards = ["listening", "reading"]
+            .map((section) => {
+              const result = state.results[section];
+              if (!result) {
+                return `<div class="score-card"><h3>${cap(section)}</h3><div class="score">Not completed</div></div>`;
+              }
+              return `<div class="score-card"><h3>${cap(section)}</h3><div class="score">${esc(result.correct)} / ${esc(result.total)}</div><div class="band">Indicative band ${esc(result.band)}</div></div>`;
+            })
+            .join("");
+
+          const answerReview = (section) => {
+            const result = state.results[section];
+            if (!result || !Array.isArray(result.detail)) {
+              return `<section><h2>${cap(section)} answer review</h2><p class="muted">This section was not completed.</p></section>`;
+            }
+            const questionMap = {};
+            ((TEST[section] && TEST[section].parts) || []).forEach((part) => {
+              (part.questions || []).forEach((question) => {
+                questionMap[question.n] = question;
+              });
+            });
+            const rows = result.detail
+              .map((item) => {
+                const question = questionMap[item.n] || {};
+                return `<tr class="${item.ok ? "correct" : "incorrect"}">
+                  <td class="qnum">${esc(item.n)}</td>
+                  <td>${esc(question.prompt || "")}</td>
+                  <td>${esc(displayValue(item.given))}</td>
+                  <td>${esc(displayValue(item.answer))}</td>
+                  <td>${item.ok ? "Correct" : "Incorrect"}</td>
+                </tr>`;
+              })
+              .join("");
+            return `<section class="page-break"><h2>${cap(section)} answer review</h2>
+              <table class="answers"><thead><tr><th>No.</th><th>Question</th><th>Candidate answer</th><th>Correct answer</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table>
+            </section>`;
+          };
+
+          const writingTasks = ((TEST.writing && TEST.writing.tasks) || [])
+            .map((task, index) => {
+              const taskNumber = index + 1;
+              const response = state.writing[taskNumber] || "";
+              return `<article class="writing-task ${taskNumber === 2 ? "page-break" : ""}">
+                <h3>${esc(task.title || `Task ${taskNumber}`)}</h3>
+                <div class="prompt-box">${task.prompt || ""}${task.visual ? `<div class="task-visual">${task.visual}</div>` : ""}</div>
+                <p><strong>Word count:</strong> ${wordCount(response)}</p>
+                <div class="response">${esc(displayValue(response))}</div>
+              </article>`;
+            })
+            .join("");
+
+          const speakingParts = ((TEST.speaking && TEST.speaking.parts) || [])
+            .map((part) => {
+              const content = part.cue
+                ? `<p><strong>Cue card:</strong> ${esc(part.cue)}</p><ul>${(part.bullets || []).map((bullet) => `<li>${esc(bullet)}</li>`).join("")}</ul>`
+                : `<ul>${(part.prompts || []).map((prompt) => `<li>${esc(prompt)}</li>`).join("")}</ul>`;
+              return `<div class="speaking-part"><h3>${esc(part.title || "Speaking part")}</h3>${content}</div>`;
+            })
+            .join("");
+
+          const notesBlock = String(state.notes || "").trim()
+            ? `<section class="page-break"><h2>Candidate notes</h2><div class="response">${esc(state.notes)}</div></section>`
+            : "";
+
+          const reportHTML = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${esc(reportTitle)}</title>
+  <style>
+    @page { size: A4; margin: 14mm 13mm 16mm; }
+    * { box-sizing: border-box; }
+    html { background: #e7ecef; }
+    body { margin: 0 auto; max-width: 210mm; background: #fff; color: #18222b; font-family: Arial, "Noto Sans", "Microsoft YaHei", sans-serif; font-size: 10.5pt; line-height: 1.42; }
+    .screen-tools { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; background: #152534; color: #fff; }
+    .screen-tools p { margin: 0; }
+    .screen-tools button { border: 1px solid #fff; background: #fff; color: #152534; padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; }
+    .report { padding: 16mm 13mm; }
+    .report-header { border-bottom: 3px solid #286b8d; padding-bottom: 8mm; margin-bottom: 8mm; }
+    .eyebrow { color: #286b8d; font-size: 9pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 2mm 0 1mm; font-size: 23pt; line-height: 1.12; color: #152534; }
+    h2 { margin: 8mm 0 4mm; padding-bottom: 2mm; border-bottom: 1px solid #9daab3; font-size: 16pt; color: #173f5f; break-after: avoid; }
+    h3 { margin: 5mm 0 2mm; color: #203746; break-after: avoid; }
+    p { margin: 2mm 0; }
+    .muted { color: #64717a; }
+    .meta { width: 100%; border-collapse: collapse; margin-top: 5mm; }
+    .meta td { border: 1px solid #c4cdd3; padding: 2.3mm 3mm; vertical-align: top; }
+    .meta td:first-child { width: 30%; font-weight: 700; background: #eef3f6; }
+    .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; margin: 5mm 0; }
+    .score-card { border: 1px solid #aebac2; padding: 5mm; break-inside: avoid; }
+    .score-card h3 { margin-top: 0; }
+    .score { font-size: 21pt; font-weight: 700; color: #173f5f; }
+    .band { color: #4d5d67; }
+    table.answers { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.2pt; }
+    table.answers th, table.answers td { border: 1px solid #b8c2c9; padding: 1.7mm; vertical-align: top; overflow-wrap: anywhere; }
+    table.answers th { background: #eaf0f4; text-align: left; }
+    table.answers th:nth-child(1), table.answers td:nth-child(1) { width: 7%; text-align: center; }
+    table.answers th:nth-child(2), table.answers td:nth-child(2) { width: 37%; }
+    table.answers th:nth-child(3), table.answers td:nth-child(3) { width: 20%; }
+    table.answers th:nth-child(4), table.answers td:nth-child(4) { width: 20%; }
+    table.answers th:nth-child(5), table.answers td:nth-child(5) { width: 16%; }
+    tr.correct td:last-child { color: #25622f; font-weight: 700; }
+    tr.incorrect td:last-child { color: #8e2626; font-weight: 700; }
+    .prompt-box { border: 1px solid #b9c3ca; background: #f7f9fa; padding: 4mm; break-inside: avoid; }
+    .prompt-box p:first-child { margin-top: 0; }
+    .task-visual { margin-top: 4mm; text-align: center; }
+    .task-visual svg { width: 100%; max-height: 118mm; }
+    .response { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #b9c3ca; min-height: 28mm; padding: 4mm; background: #fff; }
+    .criteria { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+    .criterion { border: 1px solid #c4cdd3; padding: 3mm; break-inside: avoid; }
+    .speaking-part { border-left: 4px solid #8ca9b9; padding: 1mm 0 1mm 4mm; margin: 4mm 0; break-inside: avoid; }
+    ul { margin: 2mm 0 2mm 6mm; padding-left: 5mm; }
+    .page-break { break-before: page; page-break-before: always; }
+    .notice { margin-top: 8mm; padding: 4mm; background: #eef4f7; border-left: 4px solid #286b8d; color: #42515b; }
+    footer { margin-top: 9mm; padding-top: 4mm; border-top: 1px solid #c8d0d5; color: #6a757d; font-size: 8.5pt; }
+    @media print {
+      html, body { background: #fff; max-width: none; }
+      body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .screen-tools { display: none !important; }
+      .report { padding: 0; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen-tools">
+    <p><strong>PDF export:</strong> In the print dialog, select <strong>Save as PDF</strong>.</p>
+    <div><button id="printPdfButton">Print / Save as PDF</button> <button id="closeReportButton">Close</button></div>
+  </div>
+  <main class="report">
+    <header class="report-header">
+      <div class="eyebrow">IELTS-style computer practice simulator</div>
+      <h1>Candidate Results Report</h1>
+      <p class="muted">Generated ${esc(generatedAt)}</p>
+      <table class="meta">
+        <tr><td>Candidate name</td><td>${esc(displayValue(state.candidate))}</td></tr>
+        <tr><td>Candidate number</td><td>${esc(displayValue(state.number))}</td></tr>
+        <tr><td>Mock test</td><td>${esc(displayValue(state.setName || `Mock Set ${setNumber}`))}</td></tr>
+        <tr><td>Start mode</td><td>${esc(cap(state.mode || "full"))}</td></tr>
+        <tr><td>Timing mode</td><td>${esc(cap(state.timing || "exam"))}</td></tr>
+      </table>
+    </header>
+
+    <section>
+      <h2>Score summary</h2>
+      <div class="score-grid">${scoreCards}</div>
+      <p class="muted">Listening and Reading band conversions are indicative practice estimates, not official IELTS scores.</p>
+    </section>
+
+    ${answerReview("listening")}
+    ${answerReview("reading")}
+
+    <section class="page-break">
+      <h2>Writing responses</h2>
+      <p><strong>Status:</strong> ${state.submitted.writing ? "Completed" : "Not completed"}</p>
+      ${writingTasks}
+      <h3>Writing assessment criteria</h3>
+      <div class="criteria">
+        <div class="criterion"><strong>Task achievement / response</strong><br>Coverage of the task, position, overview, support and relevance.</div>
+        <div class="criterion"><strong>Coherence and cohesion</strong><br>Organisation, progression, paragraphing, referencing and linking.</div>
+        <div class="criterion"><strong>Lexical resource</strong><br>Range, precision, flexibility, spelling and collocational control.</div>
+        <div class="criterion"><strong>Grammatical range and accuracy</strong><br>Sentence variety, control, punctuation and the effect of errors.</div>
+      </div>
+    </section>
+
+    <section class="page-break">
+      <h2>Speaking summary</h2>
+      <p><strong>Status:</strong> ${state.submitted.speaking ? "Completed" : "Not completed"}</p>
+      <p><strong>Recordings currently available in this browser session:</strong> ${Object.keys(speakingRecordings).length}</p>
+      ${speakingParts}
+      <h3>Speaking assessment criteria</h3>
+      <div class="criteria">
+        <div class="criterion"><strong>Fluency and coherence</strong><br>Continuity, pace, development, sequencing, hesitation and repetition.</div>
+        <div class="criterion"><strong>Lexical resource</strong><br>Range, precision, flexibility, idiomatic control and paraphrasing.</div>
+        <div class="criterion"><strong>Grammatical range and accuracy</strong><br>Variety and control of simple and complex structures.</div>
+        <div class="criterion"><strong>Pronunciation</strong><br>Intelligibility, stress, rhythm, connected speech and intonation.</div>
+      </div>
+    </section>
+
+    ${notesBlock}
+
+    <div class="notice"><strong>Report notice:</strong> Writing and Speaking require assessment by a suitably qualified teacher or examiner. This simulator is independently produced and is not affiliated with IELTS, the British Council, IDP or Cambridge University Press & Assessment.</div>
+    <footer>${esc(reportTitle)}</footer>
+  </main>
+</body>
+</html>`;
+
+          reportWindow.document.open();
+          reportWindow.document.write(reportHTML);
+          reportWindow.document.close();
+          reportWindow.document.title = reportTitle;
+
+          const printButton = reportWindow.document.getElementById("printPdfButton");
+          const closeButton = reportWindow.document.getElementById("closeReportButton");
+          if (printButton) printButton.onclick = () => reportWindow.print();
+          if (closeButton) closeButton.onclick = () => reportWindow.close();
+
+          reportWindow.focus();
+          setTimeout(() => {
+            try {
+              reportWindow.print();
+            } catch (printError) {
+              console.error(printError);
+            }
+          }, 650);
+        } catch (error) {
+          console.error(error);
+          alert(`The PDF report could not be opened: ${error.message || error}`);
+        } finally {
+          if (exportButton) {
+            exportButton.disabled = false;
+            exportButton.textContent = originalLabel;
+          }
+        }
       }
       function showModal(title, body) {
         $("#modalTitle").textContent = title;
